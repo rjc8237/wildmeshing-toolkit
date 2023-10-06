@@ -22,8 +22,8 @@ class Splice : public PolygonMeshOperation, private TupleOperation
 {
 public:
     // constructor for default factory pattern construction
-    Splice(Mesh& m, const Tuple& t, const OperationSettings<Splice>& settings);
-    Splice(PolygonMesh& m, const Tuple& t, const OperationSettings<Splice>& settings);
+    Splice(Mesh& m, const Tuple& h, const Tuple& g, const OperationSettings<Splice>& settings);
+    Splice(PolygonMesh& m, const Tuple& h, const Tuple& g, const OperationSettings<Splice>& settings);
 
     std::string name() const override;
 
