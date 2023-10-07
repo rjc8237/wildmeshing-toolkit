@@ -14,6 +14,7 @@ set(SRC_FILES
     TetMeshOperationExecutor.hpp
     TetMeshOperationExecutor.cpp
     PolygonMesh.hpp
+    PolygonMesh.cpp
     Primitive.hpp
     Primitive.cpp
     Tuple.cpp

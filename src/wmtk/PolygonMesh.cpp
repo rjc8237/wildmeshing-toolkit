@@ -195,8 +195,7 @@ bool PolygonMesh::is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accesso
 
 void PolygonMesh::initialize(
     Eigen::Ref<const VectorXl> next,
-    Eigen::Ref<const VectorXl> opp,
-    Eigen::Ref<const VectorXl> bnd_loops)
+    Eigen::Ref<const VectorXl> boundary_faces)
 {
     // TODO
     assert(false);
