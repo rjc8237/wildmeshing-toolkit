@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Mesh.hpp"
+#include "Tuple.hpp"
+
 #include <Eigen/Core>
 
 /**
@@ -35,6 +38,8 @@
  * data needs to be encoded on actual pairs of faces and edges as each face can be incident
  * to many edges and vice versa.
  */
+
+namespace wmtk {
 
 /**
  * Helper Functions
@@ -80,9 +85,6 @@ std::vector<std::vector<int>> build_orbits(const std::vector<int>& perm);
  * End of Helper Functions
  */
 
-namespace wmtk {
-
-
 class PolygonMesh : public Mesh
 {
 public:
@@ -108,33 +110,37 @@ public:
     /**
      * @brief Jump to the next halfedge by performing a switch of vertex and edge
      */
-    Tuple next_halfedge(const Tuple& tuple) const;
+    Tuple next_halfedge(const Tuple& h_tuple) const;
 
     /**
      * @brief Jump to the previous halfedge by performing a switch of edge and vertex
      */
-    Tuple prev_halfedge(const Tuple& tuple) const;
+    Tuple prev_halfedge(const Tuple& h_tuple) const;
 
     /**
      * @brief Jump to the opposite halfedge by performing a switch of face and vertex
      */
-    Tuple opp_halfedge(const Tuple& tuple) const;
+    Tuple opp_halfedge(const Tuple& h_tuple) const;
 
     bool is_connectivity_valid() const override;
 
     Tuple tuple_from_id(const PrimitiveType type, const long gid) const override;
 
     bool is_ccw(const Tuple& tuple) const override;
+
+    /**
+     * @brief Check if the face is a hole (i.e., not part of the surface)
+     */
+    bool is_hole_face(const Tuple& f_tuple) const;
+
     bool is_boundary(const Tuple& tuple) const override;
     bool is_boundary_vertex(const Tuple& tuple) const override;
     bool is_boundary_edge(const Tuple& tuple) const override;
 
+
     bool is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const override;
 
-    void initialize(
-        Eigen::Ref<const VectorXl> next,
-        Eigen::Ref<const VectorXl> opp,
-        Eigen::Ref<const VectorXl> bnd_loops);
+    void initialize(Eigen::Ref<const VectorXl> next, Eigen::Ref<const VectorXl> hole_faces);
     void initialize(Eigen::Ref<const RowVectors3l> F);
 
 protected:
@@ -142,11 +148,11 @@ protected:
 
 
 protected:
-    attribute::MeshAttributeHandle<long> m_hn_handle;
-    attribute::MeshAttributeHandle<long> m_hp_handle;
+    attribute::MeshAttributeHandle<long> m_en_handle;
+    attribute::MeshAttributeHandle<long> m_ep_handle;
 
-    attribute::MeshAttributeHandle<long> m_hv_handle;
-    attribute::MeshAttributeHandle<long> m_hf_handle;
+    attribute::MeshAttributeHandle<long> m_ev_handle;
+    attribute::MeshAttributeHandle<long> m_ef_handle;
 
     attribute::MeshAttributeHandle<long> m_fh_handle;
     attribute::MeshAttributeHandle<long> m_vh_handle;
