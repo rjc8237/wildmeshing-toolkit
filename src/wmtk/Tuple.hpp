@@ -9,6 +9,7 @@ class Mesh;
 class PointMesh;
 class EdgeMesh;
 class TriMesh;
+class PolygonMesh;
 class TetMesh;
 namespace operations {
 class Operation;
@@ -31,6 +32,7 @@ public:
     friend class PointMesh;
     friend class EdgeMesh;
     friend class TriMesh;
+    friend class PolygonMesh;
     friend class TetMesh;
     friend class operations::Operation;
     friend class MultiMeshManager;

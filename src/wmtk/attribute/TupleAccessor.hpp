@@ -5,6 +5,7 @@ namespace wmtk {
 class Mesh;
 class TetMesh;
 class TriMesh;
+class PolygonMesh;
 } // namespace wmtk
 namespace wmtk::attribute {
 template <typename T>
@@ -14,6 +15,7 @@ public:
     friend class wmtk::Mesh;
     friend class wmtk::TetMesh;
     friend class wmtk::TriMesh;
+    friend class wmtk::PolygonMesh;
     using Scalar = T;
 
     friend class AttributeCache<T>;
@@ -40,9 +42,10 @@ public:
     using BaseType::reserved_size; // const() -> long
 
     using BaseType::attribute; // access to Attribute object being used here
+    using CachingBaseType::has_stack;
     using CachingBaseType::mesh;
     using CachingBaseType::stack_depth;
-    using CachingBaseType::has_stack;
+
 protected:
     using CachingBaseType::base_type;
     CachingBaseType& caching_base_type() { return *this; }
