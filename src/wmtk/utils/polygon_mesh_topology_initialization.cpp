@@ -431,47 +431,4 @@ polygon_mesh_topology_initialization(Eigen::Ref<const RowVectors3l> F)
     return std::make_tuple(next, prev, to, he2f, f2he, out, hole_faces);
 }
 
-// Deprecated: Unecessary with explicit to and he2f methods
-std::tuple<std::vector<long>, std::vector<long>> build_halfedge_reindex_maps(
-    Eigen::Ref<const VectorXl> next,
-    Eigen::Ref<const VectorXl> to,
-    Eigen::Ref<const VectorXl> he2f)
-{
-    // Get the number of faces and vertices
-    long n_v = 0;
-    for (long i = 0; i < to.size(); ++i) {
-        n_v = std::max<long>(n_v, to[i] + 1);
-    }
-    long n_f = 0;
-    for (long i = 0; i < he2f.size(); ++i) {
-        n_f = std::max<long>(n_f, he2f[i] + 1);
-    }
-
-    // Create previous and vertex circulator halfedge arrays
-    VectorXl prev = build_inverse(next);
-    VectorXl circ(next.size());
-    for (long he = 0; he < next.size(); ++he) {
-        circ[he] = prev[implicit_opp(he)];
-    }
-
-    // Create vertex and face arrays from the circulator array
-    std::vector<std::vector<long>> vert = build_orbits(circ);
-    std::vector<std::vector<long>> face = build_orbits(next);
-
-    // Map circ orbit indices to indices of input vertices
-    std::vector<long> vtx_reindex(n_v);
-    for (long i = 0; i < n_v; ++i) {
-        vtx_reindex[i] = to[vert[i][0]];
-    }
-
-    // Map next orbit indices to indices of input faces
-    std::vector<long> face_reindex(n_f);
-    for (long i = 0; i < n_f; ++i) {
-        face_reindex[i] = he2f[face[i][0]];
-    }
-
-    return std::make_tuple(vtx_reindex, face_reindex);
-}
-
-
 } // namespace wmtk
