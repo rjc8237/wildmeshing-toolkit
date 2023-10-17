@@ -3,13 +3,13 @@
 namespace wmtk {
 PolygonMesh::PolygonMesh()
     : Mesh(2)
-    , m_en_handle(register_attribute<long>("m_en", PrimitiveType::Edge, 2))
-    , m_ep_handle(register_attribute<long>("m_ep", PrimitiveType::Edge, 2))
-    , m_ev_handle(register_attribute<long>("m_ev", PrimitiveType::Edge, 2))
-    , m_ef_handle(register_attribute<long>("m_ef", PrimitiveType::Edge, 2))
+    , m_next_handle(register_attribute<long>("m_next", PrimitiveType::HalfEdge, 1))
+    , m_prev_handle(register_attribute<long>("m_prev", PrimitiveType::HalfEdge, 1))
+    , m_to_handle(register_attribute<long>("m_to", PrimitiveType::HalfEdge, 1))
+    , m_out_handle(register_attribute<long>("m_out", PrimitiveType::Vertex, 1))
+    , m_hf_handle(register_attribute<long>("m_hf", PrimitiveType::HalfEdge, 1))
     , m_fh_handle(register_attribute<long>("m_fh", PrimitiveType::Face, 1))
-    , m_vh_handle(register_attribute<long>("m_vh", PrimitiveType::Vertex, 1))
-    , m_f_is_hole_handle(register_attribute<bool>("m_f_is_hole", PrimitiveType::Face, 1))
+    , m_f_is_hole_handle(register_attribute<char>("m_f_is_hole", PrimitiveType::Face, 1))
 {}
 PolygonMesh::PolygonMesh(const PolygonMesh& o) = default;
 PolygonMesh::PolygonMesh(PolygonMesh&& o) = default;
@@ -45,19 +45,13 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
 
     case PrimitiveType::Edge: {
         long h = tuple.m_global_cid;
-        long edge_hid = h % 2;
 
         // Switched edge is prev for local vertex index 0 and next for local index 1
-        auto e_switch_handle = (tuple.m_local_vid == 0) ? m_ep_handle : m_en_handle;
+        auto e_switch_handle = (tuple.m_local_vid == 0) ? m_prev_handle : m_next_handle;
         ConstAccessor<long> e_switch_accessor = create_const_accessor<long>(e_switch_handle);
-        auto e_switch = e_switch_accessor.vector_attribute(tuple);
+        long e_switch = e_switch_accessor.scalar_attribute(tuple);
 
-        return Tuple(
-            new_local_vid,
-            tuple.m_local_eid,
-            tuple.m_local_fid,
-            e_switch(edge_hid),
-            tuple.m_hash);
+        return Tuple(new_local_vid, tuple.m_local_eid, tuple.m_local_fid, e_switch, tuple.m_hash);
     }
     case PrimitiveType::Face: {
         long h = tuple.m_global_cid;
@@ -77,34 +71,27 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
 
 Tuple PolygonMesh::next_halfedge(const Tuple& h_tuple) const
 {
-    long h = h_tuple.m_global_cid;
-    long e = h / 2;
-    long edge_hid = h % 2;
-
-    ConstAccessor<long> en_accessor = create_const_accessor<long>(m_en_handle);
-    auto en = en_accessor.vector_attribute(h_tuple);
+    ConstAccessor<long> next_accessor = create_const_accessor<long>(m_next_handle);
+    long next_h = next_accessor.scalar_attribute(h_tuple);
 
     return Tuple(
         h_tuple.m_local_vid,
         h_tuple.m_local_eid,
         h_tuple.m_local_fid,
-        en(edge_hid),
+        next_h,
         h_tuple.m_hash);
 }
 
 Tuple PolygonMesh::prev_halfedge(const Tuple& h_tuple) const
 {
-    long h = h_tuple.m_global_cid;
-    long edge_hid = h % 2;
-
-    ConstAccessor<long> ep_accessor = create_const_accessor<long>(m_ep_handle);
-    auto ep = ep_accessor.vector_attribute(h_tuple);
+    ConstAccessor<long> prev_accessor = create_const_accessor<long>(m_prev_handle);
+    long prev_h = prev_accessor.scalar_attribute(h_tuple);
 
     return Tuple(
         h_tuple.m_local_vid,
         h_tuple.m_local_eid,
         h_tuple.m_local_fid,
-        ep(edge_hid),
+        prev_h,
         h_tuple.m_hash);
 }
 
@@ -133,8 +120,8 @@ Tuple PolygonMesh::tuple_from_id(const PrimitiveType type, const long gid) const
 
     switch (type) {
     case PrimitiveType::Vertex: {
-        ConstAccessor<long> vh_accessor = create_const_accessor<long>(m_vh_handle);
-        auto h = vh_accessor.index_access().scalar_attribute(gid);
+        ConstAccessor<long> out_accessor = create_const_accessor<long>(m_out_handle);
+        auto h = out_accessor.index_access().scalar_attribute(gid);
         return Tuple(0, -1, -1, h, 0);
     }
     case PrimitiveType::Edge: {
@@ -158,9 +145,9 @@ bool PolygonMesh::is_ccw(const Tuple& tuple) const
 
 bool PolygonMesh::is_hole_face(const Tuple& f_tuple) const
 {
-    ConstAccessor<bool> f_is_hole_accessor = create_const_accessor<bool>(m_f_is_hole_handle);
+    ConstAccessor<char> f_is_hole_accessor = create_const_accessor<char>(m_f_is_hole_handle);
     auto f_is_hole = f_is_hole_accessor.scalar_attribute(f_tuple);
-    return f_is_hole;
+    return (f_is_hole == 1);
 }
 
 bool PolygonMesh::is_boundary(const Tuple& tuple) const
@@ -211,25 +198,21 @@ long PolygonMesh::id(const Tuple& tuple, PrimitiveType type) const
 {
     switch (type) {
     case PrimitiveType::Vertex: {
-        long h = tuple.m_global_cid;
-        long edge_hid = h % 2;
-        long edge_vid = (edge_hid + tuple.m_local_vid) % 2;
-
-        ConstAccessor<long> ev_accessor = create_const_accessor<long>(m_ev_handle);
-        auto ev = ev_accessor.vector_attribute(tuple);
-        return ev(edge_vid);
+        ConstAccessor<long> to_accessor = create_const_accessor<long>(m_to_handle);
+        if (tuple.m_local_vid == 0) {
+            return to_accessor.scalar_attribute(tuple);
+        } else {
+            return to_accessor.scalar_attribute(opp_halfedge(tuple));
+        }
     }
     case PrimitiveType::Edge: {
         long h = tuple.m_global_cid;
         return h / 2;
     }
     case PrimitiveType::Face: {
-        long h = tuple.m_global_cid;
-        long edge_hid = h % 2;
-
-        ConstAccessor<long> ef_accessor = create_const_accessor<long>(m_ef_handle);
-        auto ef = ef_accessor.vector_attribute(tuple);
-        return ef(edge_hid);
+        ConstAccessor<long> hf_accessor = create_const_accessor<long>(m_hf_handle);
+        long f = hf_accessor.scalar_attribute(tuple);
+        return f;
     }
     case PrimitiveType::Tetrahedron:
     default: throw std::runtime_error("Invalid primitive type"); break;

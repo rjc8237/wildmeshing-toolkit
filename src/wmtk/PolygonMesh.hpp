@@ -148,16 +148,16 @@ protected:
 
 
 protected:
-    attribute::MeshAttributeHandle<long> m_en_handle;
-    attribute::MeshAttributeHandle<long> m_ep_handle;
+    attribute::MeshAttributeHandle<long> m_next_handle;
+    attribute::MeshAttributeHandle<long> m_prev_handle;
 
-    attribute::MeshAttributeHandle<long> m_ev_handle;
-    attribute::MeshAttributeHandle<long> m_ef_handle;
+    attribute::MeshAttributeHandle<long> m_to_handle;
+    attribute::MeshAttributeHandle<long> m_out_handle;
 
+    attribute::MeshAttributeHandle<long> m_hf_handle;
     attribute::MeshAttributeHandle<long> m_fh_handle;
-    attribute::MeshAttributeHandle<long> m_vh_handle;
 
-    attribute::MeshAttributeHandle<bool> m_f_is_hole_handle;
+    attribute::MeshAttributeHandle<char> m_f_is_hole_handle;
 };
 
 } // namespace wmtk
