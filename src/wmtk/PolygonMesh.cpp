@@ -55,13 +55,13 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
     }
     case PrimitiveType::Face: {
         long h = tuple.m_global_cid;
-        long edge_hid = h % 2;
+        long edge_hid = h % 2; // Local id for the halfedge with implicit opp
 
         return Tuple(
             new_local_vid,
             tuple.m_local_eid,
             tuple.m_local_fid,
-            (edge_hid == 0) ? h + 1 : h - 1,
+            (edge_hid == 0) ? (h + 1) : (h - 1),
             tuple.m_hash);
     }
     case PrimitiveType::Tetrahedron:
@@ -98,12 +98,12 @@ Tuple PolygonMesh::prev_halfedge(const Tuple& h_tuple) const
 Tuple PolygonMesh::opp_halfedge(const Tuple& h_tuple) const
 {
     long h = h_tuple.m_global_cid;
-    long edge_hid = h % 2;
+    long edge_hid = h % 2; // Local id for the halfedge with implicit opp
     return Tuple(
         h_tuple.m_local_vid,
         h_tuple.m_local_eid,
         h_tuple.m_local_fid,
-        (edge_hid == 0) ? h + 1 : h - 1,
+        (edge_hid == 0) ? (h + 1) : (h - 1),
         h_tuple.m_hash);
 }
 

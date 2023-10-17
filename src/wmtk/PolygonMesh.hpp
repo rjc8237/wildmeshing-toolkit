@@ -148,16 +148,16 @@ protected:
 
 
 protected:
-    attribute::MeshAttributeHandle<long> m_next_handle;
-    attribute::MeshAttributeHandle<long> m_prev_handle;
+    attribute::MeshAttributeHandle<long> m_next_handle; // HalfEdge -> next HalfEdge
+    attribute::MeshAttributeHandle<long> m_prev_handle; // HalfEdge -> previous HalfEdge
 
-    attribute::MeshAttributeHandle<long> m_to_handle;
-    attribute::MeshAttributeHandle<long> m_out_handle;
+    attribute::MeshAttributeHandle<long> m_to_handle; // HalfEdge -> Vertex at tip
+    attribute::MeshAttributeHandle<long> m_out_handle; // Vertex -> any outgoing HalfEdge
 
-    attribute::MeshAttributeHandle<long> m_hf_handle;
-    attribute::MeshAttributeHandle<long> m_fh_handle;
+    attribute::MeshAttributeHandle<long> m_hf_handle; // HalfEdge -> adjacent Face
+    attribute::MeshAttributeHandle<long> m_fh_handle; // Face -> any adjacent HalfEdge
 
-    attribute::MeshAttributeHandle<char> m_f_is_hole_handle;
+    attribute::MeshAttributeHandle<char> m_f_is_hole_handle; // 1 if Face is a hole
 };
 
 } // namespace wmtk
