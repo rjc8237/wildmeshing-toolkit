@@ -5,6 +5,7 @@ set(SRC_FILES
     Mesh.hpp
     PointMesh.cpp
     PointMesh.hpp
+    PolygonMesh.hpp
     TriMesh.cpp
     TriMesh.hpp
     TetMesh.cpp
@@ -18,9 +19,9 @@ set(SRC_FILES
     Tuple.cpp
     Tuple.hpp
     Types.hpp
-	Simplex.hpp
-	SimplicialComplex.hpp
-	SimplicialComplex.cpp
+    Simplex.hpp
+    SimplicialComplex.hpp
+    SimplicialComplex.cpp
     Scheduler.hpp
     Scheduler.cpp
     MultiMeshManager.hpp
@@ -35,4 +36,3 @@ add_subdirectory(simplex)
 add_subdirectory(operations)
 add_subdirectory(autogen)
 add_subdirectory(invariants)
-

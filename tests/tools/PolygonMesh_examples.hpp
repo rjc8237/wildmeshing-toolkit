@@ -22,10 +22,10 @@ PolygonMesh triangle();
 //
 PolygonMesh square();
 
-//			    * \ 
-//			   /  	e2
-//		  e3   	  	\ 
-//		 /			      *
+//          * \ 
+//         /    e2
+//      e3         \ 
+//     /            *
 //   *               /
 //    \             e1
 //     e4          /
@@ -82,9 +82,5 @@ PolygonMesh dual_bubble();
 //     *---e0--->    *---e4--->
 //
 PolygonMesh grid();
-
-
-// TODO We could also use any TriMesh example as input. This could be made explicit in
-// this file, but I am hesitant to duplicate the ascii art in case it is changed later.
 
 } // namespace wmtk::tests

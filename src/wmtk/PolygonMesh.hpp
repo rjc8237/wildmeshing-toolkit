@@ -2,6 +2,9 @@
 
 #include <Eigen/Core>
 
+#include "Mesh.hpp"
+#include "Tuple.hpp"
+
 /**
  * Proposed Implementation of the General Polygonal Mesh Data Structure
  *
@@ -36,52 +39,7 @@
  * to many edges and vice versa.
  */
 
-/**
- * Helper Functions
- *
- * TODO: These can be put in another file, e.g., polygon_mesh_topology_initialization, to conform
- * with the code organization used for trimesh and tetmesh. Or they can be made static member
- * functions. Or they could be defined only in the cpp file.
- */
-
-/**
- * Convert from matrix (F) mesh representation to NOB data structure
- *
- * @param F: #f*n, each row represents the vertex id (ccw) of current face
- * @return next_he: (N) size #h vector, next halfedge id
- * @return opp: (O) size #h vector, opposite halfedge id
- * @return bnd_loops: (B) collection of boundary face ids.
- */
-std::tuple<VectorXl, VectorXl, VectorXl> fv_to_nob(Eigen::Ref<const RowVectors3l> F);
-
-/**
- * Extend next_he and opp to add extra halfedges along the boundaries.
- *
- * @param next_he: next-halfedge map same length as opp
- * @param opp: halfedge map, for boundary halfedges -1
- * @return next_he_ext: next_halfedge map, same length as opp_ext; newly added halfedges are linked
- *                      into boundary loops
- * @return opp_ext: opp with an extra coupled halfedge added at the end for each boundary halfedge
- *                  all halfedges have a pair
- */
-std::tuple<VectorXl, VectorXl> build_boundary_loops(
-    Eigen::Ref<const VectorXl> next_he,
-    Eigen::Ref<const VectorXl> opp);
-
-/**
- * Build orbits following next id recorded in perm.
- *
- * @param perm: a permutation given by a list of non-repeating integers in the range 0..len(perm)
- * @return cycles: a list of lists, each list represents a cycle of perm
- */
-std::vector<std::vector<int>> build_orbits(const std::vector<int>& perm);
-
-/**
- * End of Helper Functions
- */
-
 namespace wmtk {
-
 
 class PolygonMesh : public Mesh
 {
@@ -131,10 +89,7 @@ public:
 
     bool is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const override;
 
-    void initialize(
-        Eigen::Ref<const VectorXl> next,
-        Eigen::Ref<const VectorXl> opp,
-        Eigen::Ref<const VectorXl> bnd_loops);
+    void initialize(Eigen::Ref<const VectorXl> next, const std::vector<long>& bnd_loops);
     void initialize(Eigen::Ref<const RowVectors3l> F);
 
 protected:
