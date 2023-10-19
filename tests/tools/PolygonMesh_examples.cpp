@@ -151,7 +151,4 @@ PolygonMesh grid()
 }
 
 
-// TODO We could also use any TriMesh example as input. This could be made explicit in
-// this file, but I am hesitant to duplicate the ascii art in case it is changed later.
-
 } // namespace wmtk::tests

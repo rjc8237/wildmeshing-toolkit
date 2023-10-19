@@ -10,7 +10,9 @@
 #include <igl/read_triangle_mesh.h>
 
 #include <stdlib.h>
+#include <algorithm>
 #include <iostream>
+#include <random>
 
 #include <wmtk/utils/Logger.hpp>
 
@@ -233,6 +235,7 @@ TEST_CASE("topology_of_complex_meshes", "[topology][2D]")
     }
 }
 
+
 TEST_CASE("topology_of_bubble", "[topology][polygon]")
 {
     VectorXl next(2);
@@ -279,6 +282,48 @@ TEST_CASE("topology_of_two_triangle_polygons", "[topology][polygon]")
     check_polygon_mesh_vertices(prev, to, out);
     check_polygon_mesh_faces(next, he2f, f2he);
     CHECK(bnd_loops.size() == 0);
+}
+
+TEST_CASE("topology_of_small_polygon_meshes", "[topology][polygon]")
+{
+    // Initialize a small trivial next permutation
+    long num_halfedges = 6;
+    VectorXl next(num_halfedges);
+    std::iota(next.begin(), next.end(), 0);
+    std::vector<long> bnd_loops = {};
+
+    // Permute next array through all possible permutations
+    // TODO: We could
+    long num_permutations = 720; // 720 = 6!
+    for (long i = 0; i < num_permutations; ++i) {
+        std::next_permutation(next.begin(), next.end(), g);
+        auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next, bnd_loops);
+
+        check_polygon_mesh_edges(next, prev);
+        check_polygon_mesh_vertices(prev, to, out);
+        check_polygon_mesh_faces(next, he2f, f2he);
+    }
+}
+
+TEST_CASE("topology_of_random_polygon_meshes", "[topology][polygon]")
+{
+    // Initialize trivial next permutation
+    long num_halfedges = 100;
+    VectorXl next(num_halfedges);
+    std::iota(next.begin(), next.end(), 0);
+    std::vector<long> bnd_loops = {};
+
+    // Randomly permute next array
+    long num_permutations = 100;
+    std::mt19937 g(0);
+    for (long i = 0; i < num_permutations; ++i) {
+        std::shuffle(next.begin(), next.end(), g);
+        auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next, bnd_loops);
+
+        check_polygon_mesh_edges(next, prev);
+        check_polygon_mesh_vertices(prev, to, out);
+        check_polygon_mesh_faces(next, he2f, f2he);
+    }
 }
 
 TEST_CASE("topology_of_complex_polygon_meshes", "[topology][polygon]")
