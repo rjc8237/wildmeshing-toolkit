@@ -1,5 +1,6 @@
 #include "polygon_mesh_topology_initialization.h"
 #include <Eigen/Sparse>
+#include <numeric>
 
 namespace wmtk {
 namespace {
@@ -18,84 +19,73 @@ VectorXl flatten(const std::vector<std::vector<long>>& list_of_lists)
     long count = 0;
     for (long i = 0; i < list_of_lists.size(); ++i) {
         for (long j = 0; j < list_of_lists[i].size(); ++j) {
-            arr[count] = list_of_lists[i][j];
+            arr(count) = list_of_lists[i][j];
             count++;
         }
     }
     return arr;
 }
 
-// Generate a range vector of integers [start, end)
+// Generate a range vector of integers (start, end)
 std::vector<long> range(long start, long end)
 {
     assert(start <= end);
-
     std::vector<long> arr(end - start);
-    for (long i = 0; i < end - start; ++i) {
-        arr[i] = start + i;
-    }
+    std::iota(arr.begin(), arr.end(), start);
 
     return arr;
+}
+
+// Build a (right) inverse g for a function f of a known size
+VectorXl build_inverse(Eigen::Ref<const VectorXl> f, long size)
+{
+    VectorXl g = VectorXl::Constant(size, 1, -1);
+    for (long i = 0; i < size; ++i) {
+        g(f(i)) = i;
+    }
+
+    return g;
 }
 
 // Build a right inverse g for a function f so that f(g(i)) = i
 VectorXl build_right_inverse(Eigen::Ref<const VectorXl> f)
 {
-    long n = 0;
-    for (long i = 0; i < f.size(); ++i) {
-        n = std::max<long>(n, f[i] + 1);
-    }
-    VectorXl g(n);
-    for (long i = 0; i < f.size(); ++i) {
-        g[f[i]] = i;
-    }
-
-    return g;
+    long n = f.maxCoeff() + 1;
+    return build_inverse(f, n);
 }
 
 // Build an inverse g for a function f
 VectorXl build_inverse(Eigen::Ref<const VectorXl> f)
 {
     long n = f.size();
-    VectorXl g(n);
-    for (long i = 0; i < n; ++i) {
-        g[f[i]] = i;
-    }
-
-    return g;
+    return build_inverse(f, n);
 }
 
-// Permute an index map m on the left by a permutation g (i.e., i -> g[m[i]])
+// Permute an index map m on the left by a permutation g (i.e., i -> g(m(i)))
 VectorXl reindex_map_image(Eigen::Ref<const VectorXl> map, Eigen::Ref<const VectorXl> perm)
 {
-    long domain_size = map.size();
-    VectorXl permuted_map(domain_size);
-    for (long i = 0; i < domain_size; ++i) {
-        permuted_map[i] = perm[map[i]];
-    }
-
-    return permuted_map;
+    return perm(map);
 }
 
-// Permute an index map m on the right by a permutation g (i.e., i -> m[g^{-1}[i]]))
+// Permute an index map m on the right by a permutation g (i.e., i -> m(g^{-1}(i))))
 VectorXl reindex_map_domain(Eigen::Ref<const VectorXl> map, Eigen::Ref<const VectorXl> perm)
 {
     long domain_size = map.size();
     VectorXl permuted_map(domain_size);
     for (long i = 0; i < domain_size; ++i) {
-        permuted_map[perm[i]] = i;
+        permuted_map(perm(i)) = i;
     }
 
     return permuted_map;
 }
 
-// Conjugate an index map m on the by a permutation g (i.e., i -> g[m[g^{-1}[i]]]))
+// Conjugate an index map m on the by a permutation g (i.e., i -> g(m(g^{-1}(i)))))
 VectorXl conjugate_permutation_map(Eigen::Ref<const VectorXl> map, Eigen::Ref<const VectorXl> perm)
 {
     long domain_size = map.size();
     VectorXl permuted_map(domain_size);
     for (long i = 0; i < domain_size; ++i) {
-        permuted_map[perm[i]] = perm[map[i]];
+        permuted_map(perm(i)) = perm(map(i));
     }
 
     return permuted_map;
@@ -107,10 +97,7 @@ VectorXl build_opp(Eigen::Ref<const VectorXl> from, Eigen::Ref<const VectorXl> t
 {
     assert(to.size() == from.size());
     long n_he = from.size();
-    long n_v = 0;
-    for (long i = 0; i < from.size(); ++i) {
-        n_v = std::max<long>(n_v, from[i] + 1);
-    }
+    long n_v = from.maxCoeff() + 1;
 
     // Shift indices by 1 to distinguish from 0 entries in the matrix
     std::vector<long> he_index = range(1, n_he + 1);
@@ -120,7 +107,7 @@ VectorXl build_opp(Eigen::Ref<const VectorXl> from, Eigen::Ref<const VectorXl> t
     typedef Eigen::Triplet<long> Trip;
     std::vector<Trip> trips(n_he);
     for (long he = 0; he < n_he; ++he) {
-        trips[he] = Trip(from[he], to[he], he_index[he]);
+        trips[he] = Trip(from(he), to(he), he_index[he]);
     }
     vv2he.setFromTriplets(trips.begin(), trips.end());
 
@@ -128,7 +115,7 @@ VectorXl build_opp(Eigen::Ref<const VectorXl> from, Eigen::Ref<const VectorXl> t
     // TODO Check validity and manifold
     VectorXl opp(n_he);
     for (long he = 0; he < n_he; ++he) {
-        opp[he] = vv2he.coeffRef(to[he], from[he]) - 1;
+        opp(he) = vv2he.coeffRef(to(he), from(he)) - 1;
     }
 
     return opp;
@@ -146,7 +133,7 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>> build_boun
     // Get halfedges on the boundary
     std::vector<long> bnd_he;
     for (long he = 0; he < n_he; ++he) {
-        if (opp[he] == -1) {
+        if (opp(he) == -1) {
             bnd_he.push_back(he);
         }
     }
@@ -154,29 +141,25 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>> build_boun
 
     // Add boundary halfedges to the extended opp array
     VectorXl opp_ext(n_he + n_bnd_he);
-    for (long i = 0; i < n_he; ++i) {
-        opp_ext[i] = opp[i];
-    }
+    opp_ext.topRows(n_he) = opp;
     for (long i = 0; i < n_bnd_he; ++i) {
-        opp_ext[bnd_he[i]] = n_he + i;
-        opp_ext[n_he + i] = bnd_he[i];
+        opp_ext(bnd_he[i]) = n_he + i;
+        opp_ext(n_he + i) = bnd_he[i];
     }
 
     // Add boundary halfedge data for the extended next and to halfedge array
     VectorXl next_ext(n_he + n_bnd_he);
     VectorXl to_ext(n_he + n_bnd_he);
-    for (long i = 0; i < n_he; ++i) {
-        next_ext[i] = next[i];
-        to_ext[i] = to[i];
-    }
+    next_ext.topRows(n_he) = next;
+    to_ext.topRows(n_he) = to;
     for (long i = 0; i < n_bnd_he; ++i) {
         long he = bnd_he[i];
-        long he_it = next[he];
-        while (opp[he_it] != -1) {
-            he_it = next[opp[he_it]];
+        long he_it = next(he);
+        while (opp(he_it) != -1) {
+            he_it = next(opp(he_it));
         }
-        next_ext[opp_ext[he_it]] = opp_ext[he];
-        to_ext[opp_ext[he_it]] = to[he];
+        next_ext(opp_ext(he_it)) = opp_ext(he);
+        to_ext(opp_ext(he_it)) = to(he);
     }
 
     // Build faces for extended halfedge, including new boundary faces
@@ -184,21 +167,21 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>> build_boun
     long n_f_ext = faces.size();
     long n_f = 0;
     for (long i = 0; i < he2f.size(); ++i) {
-        n_f = std::max<long>(n_f, he2f[i] + 1);
+        n_f = std::max<long>(n_f, he2f(i) + 1);
     }
 
     // Add boundary halfedge data for the extended he2f array, recording a halfedge per new face
     std::vector<long> bnd_loops(0);
     VectorXl he2f_ext(n_he + n_bnd_he);
     for (long i = 0; i < n_he; ++i) {
-        he2f_ext[i] = he2f[i];
+        he2f_ext(i) = he2f(i);
     }
     for (long i = 0; i < n_f_ext; ++i) {
         if (faces[i][0] >= n_he) {
             bnd_loops.push_back(faces[i][0]);
             long face_size = faces[i].size();
             for (long j = 0; j < face_size; ++j) {
-                he2f_ext[faces[i][j]] = n_f;
+                he2f_ext(faces[i][j]) = n_f;
             }
             ++n_f; // Increment number of faces
         }
@@ -220,15 +203,16 @@ VectorXl build_implicit_opp_reindex(Eigen::Ref<const VectorXl> opp)
     // Build permutation mapping old halfedge indices to new indices with implicit opp
     VectorXl he_reindex(n_he);
     for (long e = 0; e < n_e; ++e) {
-        assert(edges[e].size() == 2);
-        he_reindex[edges[e][0]] = 2 * e;
-        he_reindex[edges[e][1]] = 2 * e + 1;
+        const auto& edge = edges[e];
+        assert(edge.size() == 2);
+        he_reindex(edge[0]) = 2 * e;
+        he_reindex(edge[1]) = 2 * e + 1;
     }
 
     return he_reindex;
 }
 
-// Implicit opposite map for halfedges paired as [e] = {2*e, 2*e + 1}
+// Implicit opposite map for halfedges paired as (e) = {2*e, 2*e + 1}
 long implicit_opp(long h)
 {
     return ((h % 2) == 0) ? (h + 1) : (h - 1);
@@ -243,7 +227,7 @@ std::vector<std::vector<long>> build_orbits(Eigen::Ref<const VectorXl> perm)
     // Get the maximum value in perm
     long max_perm = 0;
     for (long i = 0; i < n_perm; ++i) {
-        max_perm = std::max(perm[i], max_perm);
+        max_perm = std::max(perm(i), max_perm);
     }
     std::vector<bool> visited(max_perm + 1, false);
 
@@ -256,7 +240,7 @@ std::vector<std::vector<long>> build_orbits(Eigen::Ref<const VectorXl> perm)
             while (true) {
                 visited[i_it] = true;
                 cycles.back().push_back(i_it);
-                i_it = perm[i_it];
+                i_it = perm(i_it);
                 if (i_it == i) {
                     break;
                 }
@@ -267,8 +251,70 @@ std::vector<std::vector<long>> build_orbits(Eigen::Ref<const VectorXl> perm)
     return cycles;
 }
 
-std::tuple<VectorXl, VectorXl, VectorXl, std::vector<long>> fv_to_nh(
-    std::vector<std::vector<long>>& F)
+std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topology_initialization(
+    Eigen::Ref<const VectorXl> next)
+{
+    // Build previous halfedge array
+    long n_he = next.size();
+    VectorXl prev = build_inverse(next);
+
+    // Construct face loops
+    std::vector<std::vector<long>> faces = build_orbits(next);
+
+    // Map faces to attached halfedges
+    long n_f = faces.size();
+    VectorXl f2he(n_f);
+    for (long i = 0; i < n_f; ++i) {
+        f2he(i) = faces[i][0];
+    }
+
+    // Map halfedges to faces
+    std::vector<long> he2f_perm;
+    he2f_perm.reserve(n_he);
+    for (long i = 0; i < n_f; ++i) {
+        for (long j = 0; j < faces[i].size(); ++j) {
+            he2f_perm.push_back(i);
+        }
+    }
+    VectorXl Fhe = flatten(faces);
+    VectorXl he2f(n_he);
+    for (long i = 0; i < n_he; ++i) {
+        he2f(Fhe(i)) = he2f_perm[i];
+    }
+
+    // Create vertex list
+    VectorXl circ(next.size());
+    for (long he = 0; he < next.size(); ++he) {
+        circ(he) = prev(implicit_opp(he));
+    }
+    std::vector<std::vector<long>> vert = build_orbits(circ);
+
+    // Create out array
+    long n_v = vert.size();
+    VectorXl out(n_v);
+    for (long i = 0; i < n_v; ++i) {
+        out(i) = next(vert[i][0]);
+    }
+
+    // Create to array
+    std::vector<long> vind;
+    vind.reserve(n_he);
+    for (long i = 0; i < n_v; ++i) {
+        for (long j = 0; j < vert[i].size(); ++j) {
+            vind.push_back(i);
+        }
+    }
+    VectorXl vhe = flatten(vert);
+    VectorXl to(n_he);
+    for (long i = 0; i < n_he; ++i) {
+        to(vhe(i)) = vind[i];
+    }
+
+    return std::make_tuple(prev, to, he2f, f2he, out);
+}
+
+std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
+polygon_mesh_topology_initialization(std::vector<std::vector<long>>& F)
 {
     // Get the cumulative sum of the number of halfedges per face
     long n_f = F.size();
@@ -280,7 +326,7 @@ std::tuple<VectorXl, VectorXl, VectorXl, std::vector<long>> fv_to_nh(
     }
 
     // Create a list of list of indices of halfedges per face, not including boundary-loop faces.
-    // Halfedges of face [v_1,...,v_n] are ordered (v_1 -> v_2),...,(v_{n-1} -> v_n),(v_n -> v_1)
+    // Halfedges of face (v_1,...,v_n) are ordered (v_1 -> v_2),...,(v_{n-1} -> v_n),(v_n -> v_1)
     std::vector<std::vector<long>> F_he(n_f);
     F_he[0] = range(0, F_he_cumsum[0]);
     for (long i = 1; i < n_f; ++i) {
@@ -334,14 +380,22 @@ std::tuple<VectorXl, VectorXl, VectorXl, std::vector<long>> fv_to_nh(
     reindex_map_domain(to, he_reindex);
     reindex_map_domain(he2f, he_reindex);
     for (long i = 0; i < n_bd_f; ++i) {
-        bnd_loops[i] = he_reindex[bnd_loops[i]];
+        bnd_loops[i] = he_reindex(bnd_loops[i]);
     }
 
-    return std::make_tuple(next, to, he2f, bnd_loops);
+    // Make previous halfedge permutation as the inverse of next
+    VectorXl prev = build_inverse(next);
+
+    // Build the vertex and face to halfedge array
+    VectorXl f2he = build_right_inverse(he2f);
+    VectorXl in = build_right_inverse(to);
+    VectorXl out = reindex_map_image(in, next); // next(in(v)) emanates from v
+
+    return std::make_tuple(next, prev, to, he2f, f2he, out, bnd_loops);
 }
 
-std::tuple<VectorXl, VectorXl, VectorXl, std::vector<long>> fv_to_nh(
-    Eigen::Ref<const RowVectors3l> F)
+std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
+polygon_mesh_topology_initialization(Eigen::Ref<const RowVectors3l> F)
 {
     // Convert eigen matrix to vector of vectors
     std::vector<std::vector<long>> F_vec(F.rows(), std::vector<long>(F.cols()));
@@ -351,84 +405,7 @@ std::tuple<VectorXl, VectorXl, VectorXl, std::vector<long>> fv_to_nh(
         }
     }
 
-    // Run fh_to_nh method
-    return fv_to_nh(F_vec);
-}
-
-std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topology_initialization(
-    Eigen::Ref<const VectorXl> next)
-{
-    // Build previous halfedge array
-    long n_he = next.size();
-    VectorXl prev = build_inverse(next);
-
-    // Construct face loops
-    std::vector<std::vector<long>> faces = build_orbits(next);
-
-    // Map faces to attached halfedges
-    long n_f = faces.size();
-    VectorXl f2he(n_f);
-    for (long i = 0; i < n_f; ++i) {
-        f2he[i] = faces[i][0];
-    }
-
-    // Map halfedges to faces
-    std::vector<long> he2f_perm;
-    he2f_perm.reserve(n_he);
-    for (long i = 0; i < n_f; ++i) {
-        for (long j = 0; j < faces[i].size(); ++j) {
-            he2f_perm.push_back(i);
-        }
-    }
-    VectorXl Fhe = flatten(faces);
-    VectorXl he2f(n_he);
-    for (long i = 0; i < n_he; ++i) {
-        he2f[Fhe[i]] = he2f_perm[i];
-    }
-
-    // Create vertex list
-    VectorXl circ(next.size());
-    for (long he = 0; he < next.size(); ++he) {
-        circ[he] = prev[implicit_opp(he)];
-    }
-    std::vector<std::vector<long>> vert = build_orbits(circ);
-
-    // Create out array
-    long n_v = vert.size();
-    VectorXl out(n_v);
-    for (long i = 0; i < n_v; ++i) {
-        out[i] = next[vert[i][0]];
-    }
-
-    // Create to array
-    std::vector<long> vind;
-    vind.reserve(n_he);
-    for (long i = 0; i < n_v; ++i) {
-        for (long j = 0; j < vert[i].size(); ++j) {
-            vind.push_back(i);
-        }
-    }
-    VectorXl vhe = flatten(vert);
-    VectorXl to(n_he);
-    for (long i = 0; i < n_he; ++i) {
-        to[vhe[i]] = vind[i];
-    }
-
-    return std::make_tuple(prev, to, he2f, f2he, out);
-}
-
-std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
-polygon_mesh_topology_initialization(Eigen::Ref<const RowVectors3l> F)
-{
-    auto [next, to, he2f, hole_faces] = fv_to_nh(F);
-    VectorXl prev = build_inverse(next);
-
-    // Build the vertex and face to halfedge array
-    VectorXl f2he = build_right_inverse(he2f);
-    VectorXl in = build_right_inverse(to);
-    VectorXl out = reindex_map_image(in, next); // next[in[v]] emanates from v
-
-    return std::make_tuple(next, prev, to, he2f, f2he, out, hole_faces);
+    return polygon_mesh_topology_initialization(F_vec);
 }
 
 } // namespace wmtk
