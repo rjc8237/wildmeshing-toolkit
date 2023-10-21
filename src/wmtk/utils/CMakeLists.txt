@@ -6,6 +6,9 @@ set(SRC_FILES
     trimesh_topology_initialization.cpp
     tetmesh_topology_initialization.h
     tetmesh_topology_initialization.cpp
+    polygon_mesh_topology_validity.hpp
+    polygon_mesh_topology_validity.cpp
+    polygon_mesh_topology_initialization.h
     getRSS.cpp
     getRSS.h
     Rational.hpp
