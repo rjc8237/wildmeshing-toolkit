@@ -18,10 +18,9 @@ VectorXl flatten(const std::vector<std::vector<long>>& list_of_lists)
     VectorXl arr(arr_size);
     long count = 0;
     for (long i = 0; i < list_of_lists.size(); ++i) {
-        for (long j = 0; j < list_of_lists[i].size(); ++j) {
-            arr(count) = list_of_lists[i][j];
-            count++;
-        }
+        const auto& list = list_of_lists[i];
+        arr.segment(count, list.size()) = VectorXl::ConstMapType(list.data(), list.size());
+        count += list.size();
     }
     return arr;
 }
@@ -47,14 +46,17 @@ VectorXl build_inverse(Eigen::Ref<const VectorXl> f, long size)
     return g;
 }
 
-// Build a right inverse g for a function f so that f(g(i)) = i
+// Build a right inverse g:{0,...,m-1}->{0,...,n-1} for a function f:{0,...,n-1}->{-l,...,0,...,m-1}
+// so that f(g(i)) = i.
+//
+// Negative indices in f are ignored, and g(i) is set to -1 if i is not in the image of f.
 VectorXl build_right_inverse(Eigen::Ref<const VectorXl> f)
 {
     long n = f.maxCoeff() + 1;
     return build_inverse(f, n);
 }
 
-// Build an inverse g for a function f
+// Build an inverse g for a function f. Requires f to be invertible.
 VectorXl build_inverse(Eigen::Ref<const VectorXl> f)
 {
     long n = f.size();
@@ -165,25 +167,20 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>> build_boun
     // Build faces for extended halfedge, including new boundary faces
     std::vector<std::vector<long>> faces = build_orbits(next_ext);
     long n_f_ext = faces.size();
-    long n_f = 0;
-    for (long i = 0; i < he2f.size(); ++i) {
-        n_f = std::max<long>(n_f, he2f(i) + 1);
-    }
 
     // Add boundary halfedge data for the extended he2f array, recording a halfedge per new face
     std::vector<long> bnd_loops(0);
     VectorXl he2f_ext(n_he + n_bnd_he);
-    for (long i = 0; i < n_he; ++i) {
-        he2f_ext(i) = he2f(i);
-    }
+    he2f_ext.topRows(n_he) = he2f;
+    long boundary_face_index = -1; // use unique negative indices for boundaries
     for (long i = 0; i < n_f_ext; ++i) {
         if (faces[i][0] >= n_he) {
             bnd_loops.push_back(faces[i][0]);
             long face_size = faces[i].size();
             for (long j = 0; j < face_size; ++j) {
-                he2f_ext(faces[i][j]) = n_f;
+                he2f_ext(faces[i][j]) = boundary_face_index;
             }
-            ++n_f; // Increment number of faces
+            --boundary_face_index;
         }
     }
 
@@ -261,14 +258,8 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topolo
     // Construct face loops
     std::vector<std::vector<long>> faces = build_orbits(next);
 
-    // Map faces to attached halfedges
-    long n_f = faces.size();
-    VectorXl f2he(n_f);
-    for (long i = 0; i < n_f; ++i) {
-        f2he(i) = faces[i][0];
-    }
-
     // Map halfedges to faces
+    long n_f = faces.size();
     std::vector<long> he2f_perm;
     he2f_perm.reserve(n_he);
     for (long i = 0; i < n_f; ++i) {
@@ -289,14 +280,8 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topolo
     }
     std::vector<std::vector<long>> vert = build_orbits(circ);
 
-    // Create out array
-    long n_v = vert.size();
-    VectorXl out(n_v);
-    for (long i = 0; i < n_v; ++i) {
-        out(i) = next(vert[i][0]);
-    }
-
     // Create to array
+    long n_v = vert.size();
     std::vector<long> vind;
     vind.reserve(n_he);
     for (long i = 0; i < n_v; ++i) {
@@ -309,6 +294,11 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topolo
     for (long i = 0; i < n_he; ++i) {
         to(vhe(i)) = vind[i];
     }
+
+    // Build the vertex and face to halfedge arrays
+    VectorXl f2he = build_right_inverse(he2f);
+    VectorXl in = build_right_inverse(to);
+    VectorXl out = reindex_map_image(in, next); // next(in(v)) emanates from v
 
     return std::make_tuple(prev, to, he2f, f2he, out);
 }
@@ -386,7 +376,7 @@ polygon_mesh_topology_initialization(std::vector<std::vector<long>>& F)
     // Make previous halfedge permutation as the inverse of next
     VectorXl prev = build_inverse(next);
 
-    // Build the vertex and face to halfedge array
+    // Build the vertex and face to halfedge arrays
     VectorXl f2he = build_right_inverse(he2f);
     VectorXl in = build_right_inverse(to);
     VectorXl out = reindex_map_image(in, next); // next(in(v)) emanates from v
