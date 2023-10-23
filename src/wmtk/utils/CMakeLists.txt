@@ -2,6 +2,8 @@
 set(SRC_FILES
     Logger.cpp
     Logger.hpp
+    edgemesh_topology_initialization.h
+    edgemesh_topology_initialization.cpp
     trimesh_topology_initialization.h
     trimesh_topology_initialization.cpp
     tetmesh_topology_initialization.h
@@ -14,5 +16,21 @@ set(SRC_FILES
     Rational.hpp
     mesh_utils.hpp
     mesh_utils.cpp
+    TupleInspector.hpp
+    TupleInspector.cpp
+
+    metaprogramming/as_mesh_variant.hpp
+    metaprogramming/as_mesh_variant.cpp
+    metaprogramming/MeshVariantTraits.cpp
+    metaprogramming/DerivedReferenceWrapperVariantTraits.hpp
+    metaprogramming/MeshVariantTraits.hpp
+    metaprogramming/ReferenceWrappedFunctorReturnCache.hpp
+    metaprogramming/ReferenceWrappedFunctorReturnType.hpp
+    metaprogramming/ReferenceWrapperVariant.hpp
+    metaprogramming/as_variant.hpp
+    metaprogramming/unwrap_ref.hpp
 )
 target_sources(wildmeshing_toolkit PRIVATE ${SRC_FILES})
+
+
+add_subdirectory(metaprogramming)
