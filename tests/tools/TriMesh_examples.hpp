@@ -14,6 +14,7 @@ namespace wmtk::tests {
 //
 TriMesh single_triangle();
 
+TriMesh single_triangle_with_position();
 
 //  3--1--- 0
 //   |     / \ .
@@ -34,6 +35,19 @@ TriMesh quad();
 //
 TriMesh two_neighbors();
 
+
+//  3--1--- 6
+//   |     /
+//   2 f1 0
+//   |   /
+//   |  /  ^
+//   5     |
+//         |   0 --1- 4
+//         v  / \     |
+//           /2 1\ f2 |
+//         0/ f0  \1  0
+//         /       \  |
+//      1  ----0----  2
 TriMesh two_neighbors_cut_on_edge01();
 
 //
