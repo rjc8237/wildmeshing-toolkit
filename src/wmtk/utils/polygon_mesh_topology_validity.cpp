@@ -113,8 +113,11 @@ bool are_polygon_mesh_faces_valid(
     std::vector<std::vector<long>> faces = build_orbits(next);
     long n_faces = faces.size();
 
-    // Number of faces in f2he match the number of orbits
-    if (f2he.size() != n_faces) {
+    // Get number of boundary faces (i.e., number of negative indices)
+    long n_bd_faces = std::abs(he2f.minCoeff());
+
+    // Number of faces in f2he and boundary faces match the number of orbits
+    if ((f2he.size() + n_bd_faces) != n_faces) {
         return false;
     }
 

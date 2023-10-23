@@ -39,7 +39,11 @@ std::vector<long> range(long start, long end)
 VectorXl build_inverse(Eigen::Ref<const VectorXl> f, long size)
 {
     VectorXl g = VectorXl::Constant(size, 1, -1);
-    for (long i = 0; i < size; ++i) {
+    for (long i = 0; i < f.size(); ++i) {
+        // Ignore negative (invalid/boundary) indices
+        if (f(i) < 0) {
+            continue;
+        }
         g(f(i)) = i;
     }
 
@@ -75,7 +79,7 @@ VectorXl reindex_map_domain(Eigen::Ref<const VectorXl> map, Eigen::Ref<const Vec
     long domain_size = map.size();
     VectorXl permuted_map(domain_size);
     for (long i = 0; i < domain_size; ++i) {
-        permuted_map(perm(i)) = i;
+        permuted_map(perm(i)) = map(i);
     }
 
     return permuted_map;
@@ -300,11 +304,11 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topolo
     VectorXl in = build_right_inverse(to);
     VectorXl out = reindex_map_image(in, next); // next(in(v)) emanates from v
 
-    return std::make_tuple(prev, to, he2f, f2he, out);
+    return std::make_tuple(prev, to, out, he2f, f2he);
 }
 
 std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
-polygon_mesh_topology_initialization(std::vector<std::vector<long>>& F)
+polygon_mesh_fv_topology_initialization(std::vector<std::vector<long>>& F)
 {
     // Get the cumulative sum of the number of halfedges per face
     long n_f = F.size();
@@ -366,9 +370,9 @@ polygon_mesh_topology_initialization(std::vector<std::vector<long>>& F)
 
     // Reindex halfedges to make opp implicit, i.e., make adjacent halfedges opposite
     VectorXl he_reindex = build_implicit_opp_reindex(opp);
-    conjugate_permutation_map(next, he_reindex);
-    reindex_map_domain(to, he_reindex);
-    reindex_map_domain(he2f, he_reindex);
+    next = conjugate_permutation_map(next, he_reindex);
+    to = reindex_map_domain(to, he_reindex);
+    he2f = reindex_map_domain(he2f, he_reindex);
     for (long i = 0; i < n_bd_f; ++i) {
         bnd_loops[i] = he_reindex(bnd_loops[i]);
     }
@@ -381,11 +385,11 @@ polygon_mesh_topology_initialization(std::vector<std::vector<long>>& F)
     VectorXl in = build_right_inverse(to);
     VectorXl out = reindex_map_image(in, next); // next(in(v)) emanates from v
 
-    return std::make_tuple(next, prev, to, he2f, f2he, out, bnd_loops);
+    return std::make_tuple(next, prev, to, out, he2f, f2he, bnd_loops);
 }
 
 std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
-polygon_mesh_topology_initialization(Eigen::Ref<const RowVectors3l> F)
+polygon_mesh_fv_topology_initialization(Eigen::Ref<const RowVectors3l> F)
 {
     // Convert eigen matrix to vector of vectors
     std::vector<std::vector<long>> F_vec(F.rows(), std::vector<long>(F.cols()));
@@ -395,7 +399,7 @@ polygon_mesh_topology_initialization(Eigen::Ref<const RowVectors3l> F)
         }
     }
 
-    return polygon_mesh_topology_initialization(F_vec);
+    return polygon_mesh_fv_topology_initialization(F_vec);
 }
 
 } // namespace wmtk

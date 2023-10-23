@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> test_examples
 #pragma once
 
 #include <wmtk/Types.hpp>
