@@ -5,6 +5,9 @@
 
 #include <Eigen/Core>
 
+#include "Mesh.hpp"
+#include "Tuple.hpp"
+
 /**
  * Proposed Implementation of the General Polygonal Mesh Data Structure
  *
@@ -50,16 +53,7 @@ public:
     PolygonMesh& operator=(const PolygonMesh& o);
     PolygonMesh& operator=(PolygonMesh&& o);
 
-    // TODO This only makes sense for simplices as currently named
-    // It is also potentially ambiguous as our top type is a face, but our basic mesh primitive
-    // is a halfedge
-    PrimitiveType top_simplex_type() const override { return PrimitiveType::Face; }
-
-
-    // TODO These only make sense for triangle meshes, but we do want them in the interface
-    // since they can be implemented using splice and bubble operations
-    Tuple split_edge(const Tuple& t, Accessor<long>& hash_accessor) override;
-    Tuple collapse_edge(const Tuple& t, Accessor<long>& hash_accessor) override;
+    long top_cell_dimension() const override { return 2; }
 
     Tuple switch_tuple(const Tuple& tuple, PrimitiveType type) const override;
 
@@ -96,8 +90,9 @@ public:
 
     bool is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const override;
 
-    void initialize(Eigen::Ref<const VectorXl> next, Eigen::Ref<const VectorXl> hole_faces);
-    void initialize(Eigen::Ref<const RowVectors3l> F);
+    void initialize(Eigen::Ref<const VectorXl> next);
+    void initialize_fv(const std::vector<std::vector<long>>& F);
+    void initialize_fv(Eigen::Ref<const RowVectors3l> F);
 
 protected:
     long id(const Tuple& tuple, PrimitiveType type) const override;

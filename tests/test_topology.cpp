@@ -1,6 +1,8 @@
 #include <wmtk/utils/edgemesh_topology_initialization.h>
+#include <wmtk/utils/polygon_mesh_topology_initialization.h>
 #include <wmtk/utils/tetmesh_topology_initialization.h>
 #include <wmtk/utils/trimesh_topology_initialization.h>
+#include <wmtk/utils/polygon_mesh_topology_validity.hpp>
 
 #include <wmtk/Mesh.hpp>
 
@@ -11,7 +13,9 @@
 #include <igl/read_triangle_mesh.h>
 
 #include <stdlib.h>
+#include <algorithm>
 #include <iostream>
+#include <random>
 
 #include <wmtk/utils/Logger.hpp>
 
@@ -173,6 +177,136 @@ TEST_CASE("topology_of_complex_meshes", "[topology][2D]")
         }
     }
 }
+
+
+TEST_CASE("topology_of_bubble", "[topology][polygon]")
+{
+    VectorXl next(2);
+    next << 1, 0;
+    auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
+
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+}
+
+TEST_CASE("topology_of_dual_bubble", "[topology][polygon]")
+{
+    VectorXl next(2);
+    next << 0, 1;
+    auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
+
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+}
+
+TEST_CASE("topology_of_single_triangle_polygon", "[topology][polygon]")
+{
+    Eigen::Matrix<long, 1, 3> F;
+    F << 0, 1, 2;
+    auto [next, prev, to, he2f, f2he, out, bnd_loops] = polygon_mesh_fv_topology_initialization(F);
+
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    CHECK(bnd_loops.size() == 1);
+}
+
+TEST_CASE("topology_of_two_triangle_polygons", "[topology][polygon]")
+{
+    Eigen::Matrix<long, 2, 3> F;
+    F << 0, 1, 2, 1, 3, 2;
+    auto [next, prev, to, he2f, f2he, out, bnd_loops] = polygon_mesh_fv_topology_initialization(F);
+
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    CHECK(bnd_loops.size() == 1);
+}
+
+TEST_CASE("topology_of_two_polygon_faces", "[topology][polygon]")
+{
+    std::vector<std::vector<long>> F(2);
+    F[0] = std::vector<long>({0, 1, 2, 3});
+    F[1] = std::vector<long>({2, 1, 0, 4, 5});
+    auto [next, prev, to, he2f, f2he, out, bnd_loops] = polygon_mesh_fv_topology_initialization(F);
+
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    CHECK(bnd_loops.size() == 1);
+}
+
+TEST_CASE("topology_of_small_polygon_meshes", "[topology][polygon]")
+{
+    // Initialize a small trivial next permutation
+    long num_halfedges = 6;
+    VectorXl next(num_halfedges);
+    std::iota(next.begin(), next.end(), 0);
+
+    // Permute next array through all possible permutations
+    long num_permutations = 720; // 720 = 6!
+    for (long i = 0; i < num_permutations; ++i) {
+        std::next_permutation(next.begin(), next.end());
+        auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
+
+        CHECK(are_polygon_mesh_edges_valid(next, prev));
+        CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+        CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    }
+}
+
+TEST_CASE("topology_of_random_polygon_meshes", "[topology][polygon]")
+{
+    // Initialize trivial next permutation
+    long num_halfedges = 100;
+    VectorXl next(num_halfedges);
+    std::iota(next.begin(), next.end(), 0);
+
+    // Randomly permute next array
+    long num_permutations = 100;
+    std::mt19937 g(0);
+    for (long i = 0; i < num_permutations; ++i) {
+        std::shuffle(next.begin(), next.end(), g);
+        auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
+
+        CHECK(are_polygon_mesh_edges_valid(next, prev));
+        CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+        CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    }
+}
+
+TEST_CASE("topology_of_complex_polygon_meshes", "[topology][polygon]")
+{
+    Eigen::MatrixXd V;
+    Eigen::Matrix<long, -1, -1> F;
+
+    std::vector<std::string> names = {
+        "/Octocat.obj",
+        "/armadillo.obj",
+        "/blub.obj",
+        "/bunny.obj",
+        "/circle.obj",
+        "/fan.obj",
+        "/sphere.obj",
+        "/test_triwild.obj",
+        "/hemisphere.obj"};
+
+    for (auto name : names) {
+        std::string path;
+        path.append(WMTK_DATA_DIR);
+        path.append(name);
+        igl::read_triangle_mesh(path, V, F);
+        auto [next, prev, to, he2f, f2he, out, bnd_loops] =
+            polygon_mesh_fv_topology_initialization(F);
+
+        CHECK(are_polygon_mesh_edges_valid(next, prev));
+        CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+        CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    }
+}
+
 
 TEST_CASE("topology_of_two_adjacent_tets", "[topology][3D]")
 {
