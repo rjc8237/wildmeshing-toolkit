@@ -17,13 +17,14 @@ bool is_invariant_under_permutation(
     Eigen::Ref<const VectorXl> perm);
 
 /**
- * @brief Check if two maps are one-sided inverses of each other
+ * @brief Check if two maps are one-sided inverses of each other, i.e., f(g(i)) = i
  *
- * The left inverse is allowed to have negative (denoting invalid) values
+ * The functions are allowed to have negative (denoting invalid) values; indices i where g(i) < 0
+ * are skipped
  *
- * @param left_inverse: map from {0,...,m-1} to Z
- * @param right_inverse: map from {0,...,n-1} to {0,...,m-1}
- * @return true iff left_inverse composed with right_inverse is the identity
+ * @param left_inverse: map f:{0,...,m-1}->Z
+ * @param right_inverse: map g:{0,...,n-1}->{0,...,m-1}
+ * @return true iff f composed with g is the identity where g is defined
  */
 bool is_one_sided_inverse(
     Eigen::Ref<const VectorXl> left_inverse,

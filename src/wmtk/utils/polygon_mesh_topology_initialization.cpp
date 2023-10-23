@@ -67,10 +67,20 @@ VectorXl build_inverse(Eigen::Ref<const VectorXl> f)
     return build_inverse(f, n);
 }
 
-// Permute an index map m on the left by a permutation g (i.e., i -> g(m(i)))
+// Permute an index map m on the left by a permutation g (i.e., i -> g(m(i))). Ignore negative
+// indices
 VectorXl reindex_map_image(Eigen::Ref<const VectorXl> map, Eigen::Ref<const VectorXl> perm)
 {
-    return perm(map);
+    long domain_size = map.size();
+    VectorXl permuted_map = map;
+    for (long i = 0; i < domain_size; ++i) {
+        // Leave negative indices unchanged
+        if (map(i) >= 0) {
+            permuted_map(i) = perm(map(i));
+        }
+    }
+
+    return permuted_map;
 }
 
 // Permute an index map m on the right by a permutation g (i.e., i -> m(g^{-1}(i))))
@@ -88,13 +98,7 @@ VectorXl reindex_map_domain(Eigen::Ref<const VectorXl> map, Eigen::Ref<const Vec
 // Conjugate an index map m on the by a permutation g (i.e., i -> g(m(g^{-1}(i)))))
 VectorXl conjugate_permutation_map(Eigen::Ref<const VectorXl> map, Eigen::Ref<const VectorXl> perm)
 {
-    long domain_size = map.size();
-    VectorXl permuted_map(domain_size);
-    for (long i = 0; i < domain_size; ++i) {
-        permuted_map(perm(i)) = perm(map(i));
-    }
-
-    return permuted_map;
+    return reindex_map_domain(reindex_map_image(map, perm), perm);
 }
 
 // Build the opposite halfedge map from halfedge to tail (from) and head (to) vertex maps,

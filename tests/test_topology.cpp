@@ -286,6 +286,7 @@ TEST_CASE("topology_of_complex_polygon_meshes", "[topology][polygon]")
         "/Octocat.obj",
         "/armadillo.obj",
         "/blub.obj",
+        "/bunny.obj",
         "/circle.obj",
         "/fan.obj",
         "/sphere.obj",

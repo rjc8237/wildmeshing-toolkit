@@ -35,8 +35,11 @@ bool is_one_sided_inverse(
     long n = right_inverse.size();
     long m = left_inverse.size();
     for (long i = 0; i < n; ++i) {
-        if ((right_inverse(i) < 0) || (right_inverse(i) >= m) ||
-            (left_inverse(right_inverse(i)) != i)) {
+        // Ignore negative indices
+        if (right_inverse(i) < 0) {
+            continue;
+        }
+        if ((right_inverse(i) >= m) || (left_inverse(right_inverse(i)) != i)) {
             return false;
         }
     }
@@ -81,8 +84,11 @@ bool are_polygon_mesh_vertices_valid(
     std::vector<std::vector<long>> vert = build_orbits(circ);
     long n_vertices = vert.size();
 
-    // Number of vertices in out match the number of orbits
-    if (out.size() != n_vertices) {
+    // Get number of invalid vertices
+    long n_invalid_vertices = (out.array() < 0).count();
+
+    // Number of valid vertices in out match the number of orbits
+    if ((out.size() - n_invalid_vertices) != n_vertices) {
         return false;
     }
 
@@ -116,8 +122,11 @@ bool are_polygon_mesh_faces_valid(
     // Get number of boundary faces (i.e., number of negative indices)
     long n_bd_faces = std::abs(he2f.minCoeff());
 
-    // Number of faces in f2he and boundary faces match the number of orbits
-    if ((f2he.size() + n_bd_faces) != n_faces) {
+    // Get number of invalid vertices
+    long n_invalid_vertices = (f2he.array() < 0).count();
+
+    // Number of valid faces in f2he and boundary faces match the number of orbits
+    if ((f2he.size() + n_bd_faces - n_invalid_vertices) != n_faces) {
         return false;
     }
 
