@@ -5,12 +5,9 @@ set(SRC_FILES
     Mesh.hpp
     PointMesh.cpp
     PointMesh.hpp
-<<<<<<< HEAD
     PolygonMesh.hpp
-=======
     EdgeMesh.hpp
     EdgeMesh.cpp
->>>>>>> main
     TriMesh.cpp
     TriMesh.hpp
     TetMesh.cpp
@@ -43,8 +40,4 @@ add_subdirectory(simplex)
 add_subdirectory(operations)
 add_subdirectory(autogen)
 add_subdirectory(invariants)
-<<<<<<< HEAD
-=======
 add_subdirectory(multimesh)
-
->>>>>>> main

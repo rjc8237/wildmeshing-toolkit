@@ -185,9 +185,9 @@ TEST_CASE("topology_of_bubble", "[topology][polygon]")
     next << 1, 0;
     auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
 
-    are_polygon_mesh_edges_valid(next, prev);
-    are_polygon_mesh_vertices_valid(prev, to, out);
-    are_polygon_mesh_faces_valid(next, he2f, f2he);
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
 }
 
 TEST_CASE("topology_of_dual_bubble", "[topology][polygon]")
@@ -196,9 +196,9 @@ TEST_CASE("topology_of_dual_bubble", "[topology][polygon]")
     next << 0, 1;
     auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
 
-    are_polygon_mesh_edges_valid(next, prev);
-    are_polygon_mesh_vertices_valid(prev, to, out);
-    are_polygon_mesh_faces_valid(next, he2f, f2he);
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
 }
 
 TEST_CASE("topology_of_single_triangle_polygon", "[topology][polygon]")
@@ -207,9 +207,9 @@ TEST_CASE("topology_of_single_triangle_polygon", "[topology][polygon]")
     F << 0, 1, 2;
     auto [next, prev, to, he2f, f2he, out, bnd_loops] = polygon_mesh_fv_topology_initialization(F);
 
-    are_polygon_mesh_edges_valid(next, prev);
-    are_polygon_mesh_vertices_valid(prev, to, out);
-    are_polygon_mesh_faces_valid(next, he2f, f2he);
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
     CHECK(bnd_loops.size() == 1);
 }
 
@@ -219,10 +219,23 @@ TEST_CASE("topology_of_two_triangle_polygons", "[topology][polygon]")
     F << 0, 1, 2, 1, 3, 2;
     auto [next, prev, to, he2f, f2he, out, bnd_loops] = polygon_mesh_fv_topology_initialization(F);
 
-    are_polygon_mesh_edges_valid(next, prev);
-    are_polygon_mesh_vertices_valid(prev, to, out);
-    are_polygon_mesh_faces_valid(next, he2f, f2he);
-    CHECK(bnd_loops.size() == 0);
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    CHECK(bnd_loops.size() == 1);
+}
+
+TEST_CASE("topology_of_two_polygon_faces", "[topology][polygon]")
+{
+    std::vector<std::vector<long>> F(2);
+    F[0] = std::vector<long>({0, 1, 2, 3});
+    F[1] = std::vector<long>({2, 1, 0, 4, 5});
+    auto [next, prev, to, he2f, f2he, out, bnd_loops] = polygon_mesh_fv_topology_initialization(F);
+
+    CHECK(are_polygon_mesh_edges_valid(next, prev));
+    CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+    CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
+    CHECK(bnd_loops.size() == 1);
 }
 
 TEST_CASE("topology_of_small_polygon_meshes", "[topology][polygon]")
@@ -233,15 +246,14 @@ TEST_CASE("topology_of_small_polygon_meshes", "[topology][polygon]")
     std::iota(next.begin(), next.end(), 0);
 
     // Permute next array through all possible permutations
-    // TODO: We could
     long num_permutations = 720; // 720 = 6!
     for (long i = 0; i < num_permutations; ++i) {
         std::next_permutation(next.begin(), next.end());
         auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
 
-        are_polygon_mesh_edges_valid(next, prev);
-        are_polygon_mesh_vertices_valid(prev, to, out);
-        are_polygon_mesh_faces_valid(next, he2f, f2he);
+        CHECK(are_polygon_mesh_edges_valid(next, prev));
+        CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+        CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
     }
 }
 
@@ -251,7 +263,6 @@ TEST_CASE("topology_of_random_polygon_meshes", "[topology][polygon]")
     long num_halfedges = 100;
     VectorXl next(num_halfedges);
     std::iota(next.begin(), next.end(), 0);
-    std::vector<long> bnd_loops = {};
 
     // Randomly permute next array
     long num_permutations = 100;
@@ -260,9 +271,9 @@ TEST_CASE("topology_of_random_polygon_meshes", "[topology][polygon]")
         std::shuffle(next.begin(), next.end(), g);
         auto [prev, to, he2f, f2he, out] = polygon_mesh_topology_initialization(next);
 
-        are_polygon_mesh_edges_valid(next, prev);
-        are_polygon_mesh_vertices_valid(prev, to, out);
-        are_polygon_mesh_faces_valid(next, he2f, f2he);
+        CHECK(are_polygon_mesh_edges_valid(next, prev));
+        CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+        CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
     }
 }
 
@@ -290,9 +301,9 @@ TEST_CASE("topology_of_complex_polygon_meshes", "[topology][polygon]")
         auto [next, prev, to, he2f, f2he, out, bnd_loops] =
             polygon_mesh_fv_topology_initialization(F);
 
-        are_polygon_mesh_edges_valid(next, prev);
-        are_polygon_mesh_vertices_valid(prev, to, out);
-        are_polygon_mesh_faces_valid(next, he2f, f2he);
+        CHECK(are_polygon_mesh_edges_valid(next, prev));
+        CHECK(are_polygon_mesh_vertices_valid(prev, to, out));
+        CHECK(are_polygon_mesh_faces_valid(next, he2f, f2he));
     }
 }
 

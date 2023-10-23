@@ -9,13 +9,10 @@ lagrange_include_modules(io)
 
 # Sources
 set(TEST_SOURCES
-<<<<<<< HEAD
     test_topology.cpp
-=======
-	test_topology.cpp
+    test_topology.cpp
     test_mesh.cpp
     test_autogen.cpp
->>>>>>> main
     test_tuple.cpp
     test_tuple_1d.cpp
     test_tuple_2d.cpp
@@ -37,7 +34,6 @@ set(TEST_SOURCES
     test_tuple_metaprogramming.cpp
     test_local_switch_search.cpp
 
-
     tools/all_valid_local_tuples.hpp
     tools/all_valid_local_tuples.cpp
     tools/DEBUG_PointMesh.hpp
@@ -45,13 +41,10 @@ set(TEST_SOURCES
     tools/DEBUG_EdgeMesh.cpp
     tools/DEBUG_TriMesh.hpp
     tools/DEBUG_TriMesh.cpp
-<<<<<<< HEAD
     tools/PolygonMesh_examples.hpp
     tools/PolygonMesh_examples.cpp
-=======
     tools/EdgeMesh_examples.hpp
     tools/EdgeMesh_examples.cpp
->>>>>>> main
     tools/TriMesh_examples.hpp
     tools/TriMesh_examples.cpp
     tools/redirect_logger_to_cout.hpp
@@ -60,17 +53,12 @@ set(TEST_SOURCES
     tools/DEBUG_TetMesh.hpp
     tools/DEBUG_TetMesh.cpp
 
-<<<<<<< HEAD
-    simplicial_complex_tests/circle_mesh_tests.cpp
-    simplicial_complex_tests/3d_mesh_tests.cpp
-=======
     tools/DEBUG_Mesh.hpp
     tools/DEBUG_Mesh.cpp
     tools/DEBUG_MultiMeshManager.hpp
     tools/DEBUG_MultiMeshManager.cpp
     tools/DEBUG_Tuple.hpp
     tools/DEBUG_Tuple.cpp
->>>>>>> main
 )
 add_executable(wmtk_tests ${TEST_SOURCES})
 

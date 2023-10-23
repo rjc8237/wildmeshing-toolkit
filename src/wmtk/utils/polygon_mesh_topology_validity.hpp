@@ -19,7 +19,9 @@ bool is_invariant_under_permutation(
 /**
  * @brief Check if two maps are one-sided inverses of each other
  *
- * @param left_inverse: map from {0,...,m-1} to {0,...,n-1}
+ * The left inverse is allowed to have negative (denoting invalid) values
+ *
+ * @param left_inverse: map from {0,...,m-1} to Z
  * @param right_inverse: map from {0,...,n-1} to {0,...,m-1}
  * @return true iff left_inverse composed with right_inverse is the identity
  */

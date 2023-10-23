@@ -5,9 +5,9 @@
 namespace wmtk::tests {
 
 
-//        * \ 
+//        * \ .
 //       /   e1
-//      e2    \ 
+//      e2    \ .
 //     /       *
 //     *---e0--->
 //
@@ -22,9 +22,9 @@ PolygonMesh triangle();
 //
 PolygonMesh square();
 
-//          * \ 
+//          * \ .
 //         /    e2
-//      e3         \ 
+//      e3         \ .
 //     /            *
 //   *               /
 //    \             e1
@@ -35,7 +35,7 @@ PolygonMesh square();
 PolygonMesh pentagon();
 
 //       -*<-e0-
-//     /         \ 
+//     /         \ .
 //    |           |
 //    |           |
 //     \         /
@@ -44,7 +44,7 @@ PolygonMesh pentagon();
 PolygonMesh digon();
 
 //      --e0--
-//    /        \ 
+//    /        \ .
 //   |          |
 //   |          |
 //    \        /
@@ -53,7 +53,7 @@ PolygonMesh digon();
 PolygonMesh monogon();
 
 //      -------
-//    /         \ 
+//    /         \ .
 //   |  *-h0a->  |
 //   |  <-h0b-*  |
 //    \         /
@@ -61,12 +61,25 @@ PolygonMesh monogon();
 PolygonMesh bubble();
 
 //      -------
-//    /         \ 
+//    /         \ .
 //   |-->*--h0a--|
 //   |--*<--h0b--|
 //    \         /
 //      -------
 PolygonMesh dual_bubble();
+
+//         4
+//       /    \ .
+//      /      \ .
+//     /        \ .
+//    3 -------- 2
+//    |          |
+//    |          |
+//    |          |
+//    |          |
+//    0 -------- 1
+//
+PolygonMesh glued_polygons();
 
 //     <---e8---*    <---e11--*
 //    *          |  *          |
