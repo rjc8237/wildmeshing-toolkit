@@ -16,20 +16,6 @@ PolygonMesh::PolygonMesh(PolygonMesh&& o) = default;
 PolygonMesh& PolygonMesh::operator=(const PolygonMesh& o) = default;
 PolygonMesh& PolygonMesh::operator=(PolygonMesh&& o) = default;
 
-Tuple PolygonMesh::split_edge(const Tuple& t, Accessor<long>& hash_accessor)
-{
-    // TODO Need to implement
-    assert(false);
-    return t;
-}
-
-Tuple PolygonMesh::collapse_edge(const Tuple& t, Accessor<long>& hash_accessor)
-{
-    // TODO Need to implement
-    assert(false);
-    return t;
-}
-
 Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
 {
     long new_local_vid = (tuple.m_local_vid + 1) % 2; // All switches swap local vid
@@ -64,6 +50,7 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
             (edge_hid == 0) ? (h + 1) : (h - 1),
             tuple.m_hash);
     }
+    case PrimitiveType::HalfEdge:
     case PrimitiveType::Tetrahedron:
     default: throw std::runtime_error("Tuple switch: Invalid primitive type"); break;
     }
@@ -132,6 +119,9 @@ Tuple PolygonMesh::tuple_from_id(const PrimitiveType type, const long gid) const
         ConstAccessor<long> fh_accessor = create_const_accessor<long>(m_fh_handle);
         auto h = fh_accessor.index_access().scalar_attribute(gid);
         return Tuple(0, -1, -1, h, 0);
+    }
+    case PrimitiveType::HalfEdge: {
+        return Tuple(0, -1, -1, gid, 0);
     }
     case PrimitiveType::Tetrahedron:
     default: throw std::runtime_error("Invalid primitive type"); break;
@@ -213,6 +203,9 @@ long PolygonMesh::id(const Tuple& tuple, PrimitiveType type) const
         ConstAccessor<long> hf_accessor = create_const_accessor<long>(m_hf_handle);
         long f = hf_accessor.scalar_attribute(tuple);
         return f;
+    }
+    case PrimitiveType::HalfEdge: {
+        return tuple.m_global_cid;
     }
     case PrimitiveType::Tetrahedron:
     default: throw std::runtime_error("Invalid primitive type"); break;
