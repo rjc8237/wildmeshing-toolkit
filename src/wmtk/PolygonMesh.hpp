@@ -5,6 +5,9 @@
 
 #include <Eigen/Core>
 
+#include "Mesh.hpp"
+#include "Tuple.hpp"
+
 /**
  * Proposed Implementation of the General Polygonal Mesh Data Structure
  *
@@ -87,8 +90,9 @@ public:
 
     bool is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const override;
 
-    void initialize(Eigen::Ref<const VectorXl> next, Eigen::Ref<const VectorXl> hole_faces);
-    void initialize(Eigen::Ref<const RowVectors3l> F);
+    void initialize(Eigen::Ref<const VectorXl> next);
+    void initialize_fv(const std::vector<std::vector<long>>& F);
+    void initialize_fv(Eigen::Ref<const RowVectors3l> F);
 
 protected:
     long id(const Tuple& tuple, PrimitiveType type) const override;
