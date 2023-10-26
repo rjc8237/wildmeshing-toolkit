@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Eigen/Core>
+#include "Mesh.hpp"
 
 /**
  * Proposed Implementation of the General Polygonal Mesh Data Structure
@@ -82,10 +83,15 @@ std::vector<std::vector<int>> build_orbits(const std::vector<int>& perm);
 
 namespace wmtk {
 
+namespace operations::polygon_mesh {
+class AtomicOperation;
+} // namespace operations::polygon_mesh
 
 class PolygonMesh : public Mesh
 {
 public:
+    friend class operations::polygon_mesh::AtomicOperation;
+
     PolygonMesh();
     PolygonMesh(const PolygonMesh& o);
     PolygonMesh(PolygonMesh&& o);

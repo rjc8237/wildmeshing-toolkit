@@ -6,6 +6,9 @@ namespace wmtk {
 class Mesh;
 class TriMesh;
 class TetMesh;
+namespace operations::polygon_mesh {
+class AtomicOperation;
+} // namespace operations::polygon_mesh
 } // namespace wmtk
 namespace wmtk::attribute {
 template <typename T>
@@ -18,6 +21,7 @@ public:
     friend class wmtk::EdgeMesh;
     friend class wmtk::PointMesh;
     friend class wmtk::TriMeshOperationExecutor;
+    friend class wmtk::operations::polygon_mesh::AtomicOperation;
     using CachingBaseType = CachingAccessor<T>;
     using ConstAccessorType = ConstAccessor<T>;
 
