@@ -1,9 +1,11 @@
 #pragma once
 
+#include <tuple>
+#include <vector>
+
 #include <wmtk/Types.hpp>
 
-
-namespace wmtk {
+namespace wmtk::utils {
 
 /**
  * @brief Build orbits following next id recorded in perm.
@@ -47,4 +49,4 @@ polygon_mesh_fv_topology_initialization(std::vector<std::vector<long>>& F);
 std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
 polygon_mesh_fv_topology_initialization(Eigen::Ref<const RowVectors3l> F);
 
-} // namespace wmtk
+} // namespace wmtk::utils

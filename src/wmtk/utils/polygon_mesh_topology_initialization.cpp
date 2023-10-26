@@ -2,8 +2,52 @@
 #include <Eigen/Sparse>
 #include <numeric>
 
-namespace wmtk {
+namespace wmtk::utils {
 namespace {
+
+
+// Build a map to remove unreferenced vertices from an FV representation, reindexing so the
+// vertex indices form a contiguous sequence from 0
+VectorXl remove_unreferenced_vertices(const std::vector<std::vector<long>>& F)
+{
+    // Get the maximum vertex index in F
+    long n_v = -1;
+    for (const auto& fi : F) {
+        for (const auto& vi : fi) {
+            n_v = std::max(n_v, vi + 1);
+        }
+    }
+
+    // Mark referenced vertices
+    std::vector<bool> referenced(n_v, false);
+    for (const auto& fi : F) {
+        for (const auto& vi : fi) {
+            referenced[vi] = true;
+        }
+    }
+
+    // Build map from original vertex indices to new contiguous vertex indices
+    VectorXl old_to_new = VectorXl::Constant(n_v, 1, -1);
+    long n_unique_v = 0;
+    for (long vi = 0; vi < n_v; ++vi) {
+        if (referenced[vi]) {
+            old_to_new(vi) = n_unique_v;
+            ++n_unique_v;
+        }
+    }
+
+    return old_to_new;
+
+    // Reindex face indices
+    // long n_f = F.size();
+    // std::vector<std::vector<long>> reindexed_F = F;
+    // for (long fi = 0; fi < n_f; ++fi) {
+    //     long face_size = F[i].size();
+    //     for (long vi = 0; vi < face_size; ++vi) {
+    //         reindexed_F[i][j] = old_to_new[F[i][j]];
+    //     }
+    // }
+}
 
 // Flatten a list of lists to a single vector
 VectorXl flatten(const std::vector<std::vector<long>>& list_of_lists)
@@ -40,7 +84,7 @@ VectorXl build_inverse(Eigen::Ref<const VectorXl> f, long size)
 {
     VectorXl g = VectorXl::Constant(size, 1, -1);
     for (long i = 0; i < f.size(); ++i) {
-        // Ignore negative (invalid/boundary) indices
+        // Ignore negative (invalid) indices
         if (f(i) < 0) {
             continue;
         }
@@ -174,21 +218,17 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>> build_boun
 
     // Build faces for extended halfedge, including new boundary faces
     std::vector<std::vector<long>> faces = build_orbits(next_ext);
-    long n_f_ext = faces.size();
 
     // Add boundary halfedge data for the extended he2f array, recording a halfedge per new face
     std::vector<long> bnd_loops(0);
     VectorXl he2f_ext(n_he + n_bnd_he);
     he2f_ext.topRows(n_he) = he2f;
-    long boundary_face_index = -1; // use unique negative indices for boundaries
-    for (long i = 0; i < n_f_ext; ++i) {
-        if (faces[i][0] >= n_he) {
-            bnd_loops.push_back(faces[i][0]);
-            long face_size = faces[i].size();
-            for (long j = 0; j < face_size; ++j) {
-                he2f_ext(faces[i][j]) = boundary_face_index;
-            }
-            --boundary_face_index;
+    long n_f = he2f.maxCoeff() + 1;
+    for (const auto& face : faces) {
+        if (face[0] >= n_he) {
+            bnd_loops.push_back(face[0]);
+            he2f_ext(face).setConstant(n_f);
+            ++n_f;
         }
     }
 
@@ -238,9 +278,10 @@ std::vector<std::vector<long>> build_orbits(Eigen::Ref<const VectorXl> perm)
 
     // Build the cycles of the permutation
     std::vector<std::vector<long>> cycles(0);
+    cycles.reserve(visited.size());
     for (long i = 0; i < max_perm + 1; ++i) {
         if (!visited[i]) {
-            cycles.push_back(std::vector<long>());
+            cycles.emplace_back(std::vector<long>());
             long i_it = i;
             while (true) {
                 visited[i_it] = true;
@@ -364,6 +405,11 @@ polygon_mesh_fv_topology_initialization(std::vector<std::vector<long>>& F)
     VectorXl to = flatten(F_to);
     VectorXl he2f = flatten(F_face);
 
+    // Reindex vertices to remove unreferenced
+    VectorXl v_reindex = remove_unreferenced_vertices(F);
+    to = reindex_map_image(to, v_reindex);
+    from = reindex_map_image(from, v_reindex);
+
     // Generate opposite halfedge map
     VectorXl opp = build_opp(from, to);
 
@@ -406,4 +452,4 @@ polygon_mesh_fv_topology_initialization(Eigen::Ref<const RowVectors3l> F)
     return polygon_mesh_fv_topology_initialization(F_vec);
 }
 
-} // namespace wmtk
+} // namespace wmtk::utils

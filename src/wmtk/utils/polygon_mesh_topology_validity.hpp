@@ -2,7 +2,7 @@
 
 #include <wmtk/Types.hpp>
 
-namespace wmtk {
+namespace wmtk::utils {
 
 /**
  * @brief Check if a map is invariant under some permutation and thus descends to a well-defined
@@ -70,4 +70,4 @@ bool are_polygon_mesh_faces_valid(
     Eigen::Ref<const VectorXl> he2f,
     Eigen::Ref<const VectorXl> f2he);
 
-} // namespace wmtk
+} // namespace wmtk::utils

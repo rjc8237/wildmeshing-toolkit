@@ -2,7 +2,7 @@
 
 #include "polygon_mesh_topology_initialization.h"
 
-namespace wmtk {
+namespace wmtk::utils {
 
 namespace {
 // Implicit opposite map for halfedges paired as [e] = {2*e, 2*e + 1}
@@ -15,16 +15,12 @@ long implicit_opp(long h)
 
 bool is_invariant_under_permutation(Eigen::Ref<const VectorXl> map, Eigen::Ref<const VectorXl> perm)
 {
-    if (map.size() != perm.size()) {
-        return false;
-    }
+    assert(map.size() == perm.size());
+
     long n = map.size();
-    for (long i = 0; i < n; ++i) {
-        if ((perm(i) < 0) || (perm(i) >= n) || map(perm(i)) != map(i)) {
-            return false;
-        }
-    }
-    return true;
+    auto pa = perm.array();
+    auto ma = map.array();
+    return ((pa >= 0) && (pa < n) && (ma(pa) == ma)).all();
 }
 
 
@@ -53,6 +49,11 @@ bool are_polygon_mesh_edges_valid(Eigen::Ref<const VectorXl> next, Eigen::Ref<co
         return false;
     }
 
+    // All indices are valid
+    if (((next.array() < 0) || (prev.array() < 0)).any()) {
+        return false;
+    }
+
     // prev is a right and left inverse for next
     if ((!is_one_sided_inverse(next, prev)) || (!is_one_sided_inverse(prev, next))) {
         return false;
@@ -72,6 +73,11 @@ bool are_polygon_mesh_vertices_valid(
     }
     long n_halfedges = to.size();
 
+    // All vertex to halfedge indices are valid
+    if ((out.array() < 0).any()) {
+        return false;
+    }
+
     // Generate per halfedge vertex circulation and from maps
     VectorXl circ(n_halfedges);
     VectorXl from(n_halfedges);
@@ -84,11 +90,8 @@ bool are_polygon_mesh_vertices_valid(
     std::vector<std::vector<long>> vert = build_orbits(circ);
     long n_vertices = vert.size();
 
-    // Get number of invalid vertices
-    long n_invalid_vertices = (out.array() < 0).count();
-
-    // Number of valid vertices in out match the number of orbits
-    if ((out.size() - n_invalid_vertices) != n_vertices) {
+    // Number of vertices in out match the number of orbits
+    if (out.size() != n_vertices) {
         return false;
     }
 
@@ -115,18 +118,17 @@ bool are_polygon_mesh_faces_valid(
     }
     long n_halfedges = he2f.size();
 
+    // All face to halfedge indices are valid
+    if ((f2he.array() < 0).any()) {
+        return false;
+    }
+
     // Build faces from next map
     std::vector<std::vector<long>> faces = build_orbits(next);
     long n_faces = faces.size();
 
-    // Get number of boundary faces (i.e., number of negative indices)
-    long n_bd_faces = std::abs(he2f.minCoeff());
-
-    // Get number of invalid vertices
-    long n_invalid_vertices = (f2he.array() < 0).count();
-
-    // Number of valid faces in f2he and boundary faces match the number of orbits
-    if ((f2he.size() + n_bd_faces - n_invalid_vertices) != n_faces) {
+    // Number of faces in f2he match the number of orbits
+    if (f2he.size() != n_faces) {
         return false;
     }
 
@@ -143,4 +145,4 @@ bool are_polygon_mesh_faces_valid(
     return true;
 }
 
-} // namespace wmtk
+} // namespace wmtk::utils
