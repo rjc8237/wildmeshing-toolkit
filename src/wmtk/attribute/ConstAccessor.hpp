@@ -5,6 +5,7 @@
 namespace wmtk {
 class Mesh;
 class TriMesh;
+class PolygonMesh;
 class TetMesh;
 class TriMeshOperationExecutor;
 class EdgeMesh;
@@ -23,6 +24,7 @@ public:
     friend class wmtk::Mesh;
     friend class wmtk::TetMesh;
     friend class wmtk::TriMesh;
+    friend class wmtk::PolygonMesh;
     friend class wmtk::EdgeMesh;
     friend class wmtk::PointMesh;
     friend class wmtk::TriMeshOperationExecutor;

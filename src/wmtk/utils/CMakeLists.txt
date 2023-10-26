@@ -8,6 +8,10 @@ set(SRC_FILES
     trimesh_topology_initialization.cpp
     tetmesh_topology_initialization.h
     tetmesh_topology_initialization.cpp
+    polygon_mesh_topology_initialization.h
+    polygon_mesh_topology_initialization.cpp
+    polygon_mesh_topology_validity.hpp
+    polygon_mesh_topology_validity.cpp
     getRSS.cpp
     getRSS.h
     Rational.hpp
@@ -28,6 +32,5 @@ set(SRC_FILES
     metaprogramming/unwrap_ref.hpp
 )
 target_sources(wildmeshing_toolkit PRIVATE ${SRC_FILES})
-
 
 add_subdirectory(metaprogramming)

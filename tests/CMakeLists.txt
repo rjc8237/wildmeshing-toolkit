@@ -9,13 +9,14 @@ lagrange_include_modules(io)
 
 # Sources
 set(TEST_SOURCES
-	test_topology.cpp
+    test_topology.cpp
+    test_topology.cpp
     test_mesh.cpp
     test_autogen.cpp
     test_tuple.cpp
     test_tuple_1d.cpp
     test_tuple_2d.cpp
-	test_tuple_3d.cpp
+    test_tuple_3d.cpp
     test_io.cpp
     test_execution.cpp
     test_simplex_collection.cpp
@@ -32,7 +33,6 @@ set(TEST_SOURCES
     test_variant_metaprogramming.cpp
     test_tuple_metaprogramming.cpp
     test_local_switch_search.cpp
-
 
     tools/all_valid_local_tuples.hpp
     tools/all_valid_local_tuples.cpp
@@ -59,7 +59,6 @@ set(TEST_SOURCES
     tools/DEBUG_Tuple.cpp
 )
 add_executable(wmtk_tests ${TEST_SOURCES})
-
 
 # Dependencies
 include(finite-diff)
