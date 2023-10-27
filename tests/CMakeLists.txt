@@ -45,6 +45,8 @@ set(TEST_SOURCES
     tools/DEBUG_PolygonMesh.cpp
     tools/EdgeMesh_examples.hpp
     tools/EdgeMesh_examples.cpp
+    tools/PolygonMesh_examples.hpp
+    tools/PolygonMesh_examples.cpp
     tools/TriMesh_examples.hpp
     tools/TriMesh_examples.cpp
     tools/redirect_logger_to_cout.hpp

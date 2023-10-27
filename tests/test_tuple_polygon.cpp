@@ -11,7 +11,7 @@ using namespace wmtk::tests;
 
 TEST_CASE("polygon_initialize", "[mesh_creation],[tuple_polygon]")
 {
-    DEBUG_PolygonMesh = triangle();
+    DEBUG_PolygonMesh m = triangle();
 
     // Check connectivity is valid
     REQUIRE(m.is_connectivity_valid());
@@ -41,7 +41,7 @@ void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_
         const std::vector<Tuple> vertices = m.get_all(PrimitiveType::Vertex);
         REQUIRE(vertices.size() == n_vertices);
         for (long vi = 0; vi < n_vertices; ++vi) {
-            CHECK(m._debug_id(vertices[vi], PrimitiveType::Vertex) == vi);
+            CHECK(m.id(vertices[vi], PrimitiveType::Vertex) == vi);
         }
     }
     SECTION("edges")
@@ -49,7 +49,7 @@ void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_
         const std::vector<Tuple> edges = m.get_all(PrimitiveType::Edge);
         REQUIRE(edges.size() == n_edges);
         for (long ei = 0; ei < n_edges; ++ei) {
-            CHECK(m._debug_id(edges[ei], PrimitiveType::Edge) == ei);
+            CHECK(m.id(edges[ei], PrimitiveType::Edge) == ei);
         }
     }
     SECTION("faces")
@@ -57,15 +57,15 @@ void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_
         const std::vector<Tuple> faces = m.get_all(PrimitiveType::Face);
         REQUIRE(faces.size() == n_faces);
         for (long fi = 0; fi < n_faces; ++fi) {
-            CHECK(m._debug_id(faces[fi], PrimitiveType::Face) == fi);
+            CHECK(m.id(faces[fi], PrimitiveType::Face) == fi);
         }
     }
     SECTION("halfedges")
     {
         const std::vector<Tuple> halfedges = m.get_all(PrimitiveType::HalfEdge);
-        REQUIRE(edges.size() == 2 * num_edges);
-        for (long hi = 0; hi < 2 * num_edges; ++hi) {
-            CHECK(m._debug_id(halfedges[hi], PrimitiveType::HalfEdge) == hi);
+        REQUIRE(halfedges.size() == 2 * n_edges);
+        for (long hi = 0; hi < 2 * n_edges; ++hi) {
+            CHECK(m.id(halfedges[hi], PrimitiveType::HalfEdge) == hi);
         }
     }
 }
@@ -135,18 +135,18 @@ TEST_CASE("polygon_random_switches", "[tuple_operation],[tuple_polygon]")
 }
 
 // Compare vertex, edge, face, and halfedge indices of the tuples
-bool tuple_equal(const PolygonMesh& m, const Tuple& t0, const Tuple& t1)
+bool tuple_equal(const DEBUG_PolygonMesh& m, const Tuple& t0, const Tuple& t1)
 {
     const auto l = wmtk::logger().level();
     wmtk::logger().set_level(spdlog::level::err);
-    const long v0 = m._debug_id(t0, PrimitiveType::Vertex);
-    const long e0 = m._debug_id(t0, PrimitiveType::Edge);
-    const long f0 = m._debug_id(t0, PrimitiveType::Face);
-    const long h0 = m._debug_id(t0, PrimitiveType::HalfEdge);
-    const long v1 = m._debug_id(t1, PrimitiveType::Vertex);
-    const long e1 = m._debug_id(t1, PrimitiveType::Edge);
-    const long f1 = m._debug_id(t1, PrimitiveType::Face);
-    const long h1 = m._debug_id(t1, PrimitiveType::HalfEdge);
+    const long v0 = m.id(t0, PrimitiveType::Vertex);
+    const long e0 = m.id(t0, PrimitiveType::Edge);
+    const long f0 = m.id(t0, PrimitiveType::Face);
+    const long h0 = m.id(t0, PrimitiveType::HalfEdge);
+    const long v1 = m.id(t1, PrimitiveType::Vertex);
+    const long e1 = m.id(t1, PrimitiveType::Edge);
+    const long f1 = m.id(t1, PrimitiveType::Face);
+    const long h1 = m.id(t1, PrimitiveType::HalfEdge);
     wmtk::logger().set_level(l);
     return (v0 == v1) && (e0 == e1) && (f0 == f1) && (h0 == h1);
 }
@@ -196,10 +196,10 @@ TEST_CASE("polygon_double_switches", "[tuple_operation],[tuple_polygon]")
 
 void check_next_prev(const DEBUG_PolygonMesh& m, const Tuple& t)
 {
-    const Tuple t_iter = m.next_halfedge(m.prev_halfedge(t));
-    CHECK(tuple_equal(m, t, t_iter));
-    const Tuple t_iter = m.prev_halfedge(m.next_halfedge(t));
-    CHECK(tuple_equal(m, t, t_iter));
+    const Tuple t_pn = m.next_halfedge(m.prev_halfedge(t));
+    CHECK(tuple_equal(m, t, t_pn));
+    const Tuple t_np = m.prev_halfedge(m.next_halfedge(t));
+    CHECK(tuple_equal(m, t, t_np));
 }
 
 TEST_CASE("polygon_next_prev", "[tuple_operation],[tuple_polygon]")
@@ -270,7 +270,7 @@ void check_next_next_next(const DEBUG_PolygonMesh& m, const Tuple& t)
 
 TEST_CASE("polygon_next_next_next", "[tuple_operation],[tuple_polygon]")
 {
-    DEBUG_PolygonMesh m = interior_edge();
+    DEBUG_PolygonMesh m = triangle();
 
     SECTION("vertices")
     {
@@ -307,7 +307,7 @@ TEST_CASE("polygon_one_ring_iteration", "[tuple_operation],[tuple_polygon]")
         tris.row(3) = Eigen::Matrix<long, 3, 1>{0, 4, 5};
         tris.row(4) = Eigen::Matrix<long, 3, 1>{0, 5, 6};
         tris.row(5) = Eigen::Matrix<long, 3, 1>{0, 6, 1};
-        m.initialize(tris);
+        m.initialize_fv(tris);
     }
 
     const std::vector<Tuple> vertices = m.get_all(PrimitiveType::Vertex);
