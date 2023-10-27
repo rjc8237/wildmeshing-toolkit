@@ -16,6 +16,7 @@ set(TEST_SOURCES
     test_tuple_1d.cpp
     test_tuple_2d.cpp
     test_tuple_3d.cpp
+    test_tuple_polygon.cpp
     test_io.cpp
     test_execution.cpp
     test_simplex_collection.cpp

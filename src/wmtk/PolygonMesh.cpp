@@ -170,19 +170,24 @@ bool PolygonMesh::is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accesso
     return true;
 }
 
-void PolygonMesh::initialize(
-    Eigen::Ref<const VectorXl> next,
-    Eigen::Ref<const VectorXl> boundary_faces)
+void PolygonMesh::initialize(Eigen::Ref<const VectorXl> next)
 {
     // TODO
     assert(false);
 }
 
-void PolygonMesh::initialize(Eigen::Ref<const RowVectors3l> F)
+void PolygonMesh::initialize_fv(const std::vector<std::vector<long>>& F)
 {
     // TODO
     assert(false);
 }
+
+void PolygonMesh::initialize_fv(Eigen::Ref<const RowVectors3l> F)
+{
+    // TODO
+    assert(false);
+}
+
 
 long PolygonMesh::id(const Tuple& tuple, PrimitiveType type) const
 {
