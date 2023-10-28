@@ -26,6 +26,7 @@ set(TEST_SOURCES
     test_2d_operation_construction.cpp
     test_accessor.cpp
     test_example_meshes.cpp
+    test_polygon_example_meshes.cpp
     test_3d_operations.cpp
     test_multi_mesh.cpp
     test_multi_mesh_visitor.cpp

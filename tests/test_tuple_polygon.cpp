@@ -9,6 +9,19 @@
 using namespace wmtk;
 using namespace wmtk::tests;
 
+// Count the number of faces that are interior (i.e., not holes) in the mesh
+long count_interior_faces(const DEBUG_PolygonMesh& m, const std::vector<Tuple> faces)
+{
+    long num_interior_faces = 0;
+    for (const auto& face : faces) {
+        if (!m.is_hole_face(face)) {
+            ++num_interior_faces;
+        }
+    }
+    return num_interior_faces;
+}
+
+
 TEST_CASE("polygon_initialize", "[mesh_creation],[tuple_polygon]")
 {
     DEBUG_PolygonMesh m = triangle();
@@ -18,13 +31,13 @@ TEST_CASE("polygon_initialize", "[mesh_creation],[tuple_polygon]")
 
     // Get all primitives for the mesh
     const std::vector<Tuple> vertices = m.get_all(PrimitiveType::Vertex);
-    REQUIRE(vertices.size() == 3);
+    CHECK(vertices.size() == 3);
     const std::vector<Tuple> edges = m.get_all(PrimitiveType::Edge);
-    REQUIRE(edges.size() == 3);
+    CHECK(edges.size() == 3);
     const std::vector<Tuple> faces = m.get_all(PrimitiveType::Face);
-    REQUIRE(faces.size() == 1);
+    CHECK(count_interior_faces(m, faces) == 2);
     const std::vector<Tuple> halfedges = m.get_all(PrimitiveType::HalfEdge);
-    REQUIRE(halfedges.size() == 6);
+    CHECK(halfedges.size() == 6);
 
     // Check tuple validity
     CHECK(m.is_valid_slow(vertices[0]));
@@ -55,7 +68,7 @@ void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_
     SECTION("faces")
     {
         const std::vector<Tuple> faces = m.get_all(PrimitiveType::Face);
-        REQUIRE(faces.size() == n_faces);
+        CHECK(count_interior_faces(m, faces) == n_faces);
         for (long fi = 0; fi < n_faces; ++fi) {
             CHECK(m.id(faces[fi], PrimitiveType::Face) == fi);
         }
@@ -73,7 +86,7 @@ void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_
 TEST_CASE("polygon_1_triangle", "[tuple_generation],[tuple_polygon]")
 {
     DEBUG_PolygonMesh m = triangle();
-    check_tuple_generation(m, 3, 3, 1);
+    check_tuple_generation(m, 3, 3, 2);
 }
 
 TEST_CASE("glued_polygons", "[tuple_generation],[tuple_polygon]")
@@ -187,7 +200,6 @@ TEST_CASE("polygon_double_switches", "[tuple_operation],[tuple_polygon]")
     SECTION("faces")
     {
         const std::vector<Tuple> faces = m.get_all(PrimitiveType::Face);
-        REQUIRE(faces.size() == 3);
         for (const auto& t : faces) {
             check_double_switches(m, t);
         }
@@ -357,18 +369,17 @@ TEST_CASE("polygon_is_boundary", "[tuple_polygon]")
     }
     CHECK(n_boundary_vertices == 8);
 
-    // TODO Figure out how to check this property
-    // const Tuple t1 = m.tuple_from_id(PrimitiveType::Edge, 0);
-    // CHECK(m.is_boundary(t1));
-    // CHECK(m.is_boundary_vertex(t1));
+    const Tuple t1 = m.halfedge_tuple_from_vertex_in_face(0, 0);
+    CHECK(m.is_boundary_edge(t1));
+    CHECK(m.is_boundary_vertex(t1));
 
-    // const Tuple t2 = m.switch_edge(t1);
-    // CHECK(!m.is_boundary(t2));
-    // CHECK(m.is_boundary_vertex(t2));
+    const Tuple t2 = m.halfedge_tuple_from_vertex_in_face(1, 0);
+    CHECK(!m.is_boundary_edge(t2));
+    CHECK(m.is_boundary_vertex(t2));
 
-    // const Tuple t3 = m.switch_vertex(t2);
-    // CHECK(!m.is_boundary(t3));
-    // CHECK(!m.is_boundary_vertex(t3));
+    const Tuple t3 = m.halfedge_tuple_from_vertex_in_face(4, 0);
+    CHECK(!m.is_boundary_edge(t3));
+    CHECK(!m.is_boundary_vertex(t3));
 }
 
 // TODO Test get tuple

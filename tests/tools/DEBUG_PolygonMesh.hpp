@@ -14,6 +14,8 @@ public:
     bool operator==(const DEBUG_PolygonMesh& o) const;
     bool operator!=(const DEBUG_PolygonMesh& o) const;
 
+    Tuple halfedge_tuple_from_vertex_in_face(long vid, long fid) const;
+
     long id(const Tuple& tuple, PrimitiveType type) const override;
     using PolygonMesh::tuple_from_id;
 };

@@ -8,40 +8,6 @@
 #include "Mesh.hpp"
 #include "Tuple.hpp"
 
-/**
- * Proposed Implementation of the General Polygonal Mesh Data Structure
- *
- * A general polygonal mesh is represented using tuples of a consistently oriented face, edge,
- * and vertex together with orientation-reversing switch vertex, switch edge, and switch face maps.
- *
- * Using the tuple structure, the global cid is a halfedge (equivalently, an edge with a normal
- * direction), and a local vid. The vertex index can be interpreted as the tip of the edge and is
- * thus equivalent to specifying a vertex of the edge as well as a direction, which together with
- * the normal direction specifies an orientation of the face. The local eid and local fid are both
- * set to default -1.
- *
- * The implementation is done using the standard halfedge operations, next and previous halfedge,
- * encoded as pairs of edge attributes (two per edge, one for each halfedge). Opp is inferred from
- * the pairing of halfedges into edges. The switch vertex, switch edge, and switch face operations
- * can then be implemented as simple combinations of next, prev, and opp along with the additional
- * operation of switching the vertex of the halfedge. Switching the vertex corresponds to switching
- * the orientation of the surface, so next becomes prev and vice versa.
- *
- * Note that halfedge only supports oriented surfaces. However, the oriented halfedge could easily
- * be extended to support nonorientable surfaces by adding an additional edge attributes to indicate
- * whether the two adjacent faces should be glued with consistent or anti-consistent orientation.
- *
- * The choice of halfedges directed with the local vertex index is natural for the given tuple
- * interface as the halfedge is a 1-simplex in the given face, and using halfedge allows for some
- * theoretical simplifications as well as more compact memory usage.
- *
- * Also note that the natural generalization of this implementation is the facet-edge data
- * structure of Dobkin and Laszlo, where the primitive is an oriented face-edge
- * triple. However, while the halfedge can be encoded as an edge attribute, the facet-edge
- * data needs to be encoded on actual pairs of faces and edges as each face can be incident
- * to many edges and vice versa.
- */
-
 namespace wmtk {
 
 class PolygonMesh : public Mesh
@@ -73,6 +39,7 @@ public:
     Tuple opp_halfedge(const Tuple& h_tuple) const;
 
     bool is_connectivity_valid() const override;
+    bool is_local_connectivity_valid(const Tuple& v_tuple, PrimitiveType type) const;
 
     Tuple tuple_from_id(const PrimitiveType type, const long gid) const override;
 
@@ -90,6 +57,13 @@ public:
 
     bool is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const override;
 
+    void initialize(
+        Eigen::Ref<const VectorXl> next,
+        Eigen::Ref<const VectorXl> prev,
+        Eigen::Ref<const VectorXl> to,
+        Eigen::Ref<const VectorXl> out,
+        Eigen::Ref<const VectorXl> he2f,
+        Eigen::Ref<const VectorXl> f2he);
     void initialize(Eigen::Ref<const VectorXl> next);
     void initialize_fv(const std::vector<std::vector<long>>& F);
     void initialize_fv(Eigen::Ref<const RowVectors3l> F);
@@ -109,6 +83,11 @@ protected:
     attribute::MeshAttributeHandle<long> m_fh_handle; // Face -> any adjacent HalfEdge
 
     attribute::MeshAttributeHandle<char> m_f_is_hole_handle; // 1 if Face is a hole
+
+    bool is_vertex_connectivity_valid(long vid) const;
+    bool is_edge_connectivity_valid(long eid) const;
+    bool is_face_connectivity_valid(long fid) const;
+    bool is_halfedge_connectivity_valid(long hid) const;
 };
 
 } // namespace wmtk

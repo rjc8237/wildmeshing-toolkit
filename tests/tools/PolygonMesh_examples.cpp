@@ -80,8 +80,8 @@ PolygonMesh glued_polygons()
     PolygonMesh m;
 
     std::vector<std::vector<long>> F(2);
-    F[0] = std::vector<long>({0, 1, 2, 3});
-    F[1] = std::vector<long>({3, 2, 4});
+    F[0] = std::vector<long>({0, 1, 4, 3, 2});
+    F[1] = std::vector<long>({2, 3, 4, 5});
     m.initialize_fv(F);
     return m;
 }
