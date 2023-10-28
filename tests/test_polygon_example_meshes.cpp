@@ -6,6 +6,9 @@
 using namespace wmtk;
 using namespace wmtk::tests;
 
+// TODO Add additional checks like elements counts and genus
+// It would be better to make the computation accessible for other tests like splice
+
 namespace {
 struct MeshDebugInfo
 {

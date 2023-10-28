@@ -117,46 +117,72 @@ bool PolygonMesh::is_connectivity_valid() const
     ConstAccessor<char> h_flag_accessor = get_flag_accessor(PrimitiveType::HalfEdge);
 
     // Halfedge connectivity
+    long n_halfedges = 0;
     for (long hid = 0; hid < capacity(PrimitiveType::HalfEdge); ++hid) {
         if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
             continue;
+        } else {
+            ++n_halfedges;
         }
+
         if (!is_halfedge_connectivity_valid(hid)) {
             return false;
         }
     }
 
     // Vertex Connectivity
+    // TODO Check vertex boundary conditions
+    long n_vertices = 0;
     for (long vid = 0; vid < capacity(PrimitiveType::Vertex); ++vid) {
         if (v_flag_accessor.index_access().scalar_attribute(vid) == 0) {
             continue;
+        } else {
+            ++n_vertices;
         }
+
         if (!is_vertex_connectivity_valid(vid)) {
             return false;
         }
     }
 
     // Edge Connectivity
+    long n_edges = 0;
     for (long eid = 0; eid < capacity(PrimitiveType::Edge); ++eid) {
         if (e_flag_accessor.index_access().scalar_attribute(eid) == 0) {
             continue;
+        } else {
+            ++n_edges;
         }
+
         if (!is_edge_connectivity_valid(eid)) {
             return false;
         }
     }
 
     // Face Connectivity
+    long n_faces = 0;
     for (long fid = 0; fid < capacity(PrimitiveType::Face); ++fid) {
         if (f_flag_accessor.index_access().scalar_attribute(fid) == 0) {
             continue;
+        } else {
+            ++n_faces;
         }
+
         if (!is_face_connectivity_valid(fid)) {
             return false;
         }
     }
 
-    // TODO Check boundary conditions and next/circulator orbit counts are correct
+    // Check element counts
+    if (n_halfedges != (2 * n_edges)) {
+        return false;
+    }
+    if (n_vertices != count_vertices_slow()) {
+        return false;
+    }
+    if (n_faces != count_faces_slow()) {
+        return false;
+    }
 
     return true;
 }
@@ -486,6 +512,73 @@ bool PolygonMesh::is_halfedge_connectivity_valid(long hid) const
     }
 
     return true;
+}
+
+long PolygonMesh::count_vertices_slow() const
+{
+    ConstAccessor<char> h_flag_accessor = get_flag_accessor(PrimitiveType::HalfEdge);
+    ConstAccessor<long> prev_accessor = create_const_accessor<long>(m_prev_handle);
+
+    long n_halfedges = capacity(PrimitiveType::HalfEdge);
+    std::vector<bool> visited(n_halfedges, false);
+    std::vector<std::vector<long>> vertex_cycles(0);
+    vertex_cycles.reserve(n_halfedges);
+    for (long hid = 0; hid < n_halfedges; ++hid) {
+        // Skip deleted halfedges
+        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+            return false;
+        }
+
+        // Build the vertex orbit of the halfedge under the circulator if it hasn't been seen yet
+        if (!visited[hid]) {
+            vertex_cycles.emplace_back(std::vector<long>());
+            long hid_iter = hid;
+            while (true) {
+                visited[hid_iter] = true;
+                vertex_cycles.back().push_back(hid_iter);
+                hid_iter = implicit_opp(hid_iter);
+                hid_iter = prev_accessor.index_access().scalar_attribute(hid_iter);
+                if (hid_iter == hid) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return vertex_cycles.size();
+}
+
+long PolygonMesh::count_faces_slow() const
+{
+    ConstAccessor<char> h_flag_accessor = get_flag_accessor(PrimitiveType::HalfEdge);
+    ConstAccessor<long> next_accessor = create_const_accessor<long>(m_next_handle);
+
+    long n_halfedges = capacity(PrimitiveType::HalfEdge);
+    std::vector<bool> visited(n_halfedges, false);
+    std::vector<std::vector<long>> face_cycles(0);
+    face_cycles.reserve(n_halfedges);
+    for (long hid = 0; hid < n_halfedges; ++hid) {
+        // Skip deleted halfedges
+        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+            return false;
+        }
+
+        // Build the face orbit of the halfedge under next if it hasn't been seen yet
+        if (!visited[hid]) {
+            face_cycles.emplace_back(std::vector<long>());
+            long hid_iter = hid;
+            while (true) {
+                visited[hid_iter] = true;
+                face_cycles.back().push_back(hid_iter);
+                hid_iter = next_accessor.index_access().scalar_attribute(hid_iter);
+                if (hid_iter == hid) {
+                    break;
+                }
+            }
+        }
+    }
+
+    return face_cycles.size();
 }
 
 } // namespace wmtk

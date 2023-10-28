@@ -9,6 +9,8 @@
 using namespace wmtk;
 using namespace wmtk::tests;
 
+// TODO Make sure we have full coverage of methods
+
 // Count the number of faces that are interior (i.e., not holes) in the mesh
 long count_interior_faces(const DEBUG_PolygonMesh& m, const std::vector<Tuple> faces)
 {

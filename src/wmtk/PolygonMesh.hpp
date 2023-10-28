@@ -88,6 +88,8 @@ protected:
     bool is_edge_connectivity_valid(long eid) const;
     bool is_face_connectivity_valid(long fid) const;
     bool is_halfedge_connectivity_valid(long hid) const;
+    long count_vertices_slow() const;
+    long count_faces_slow() const;
 };
 
 } // namespace wmtk
