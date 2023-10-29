@@ -90,6 +90,32 @@ PolygonMesh glued_polygons();
 //
 PolygonMesh grid();
 
+//    2 ----------- 3
+//    |             |
+//    |    6 - 7    |
+//    |    |   |    |
+//    |    4 - 5    |
+//    |  /          |
+//    0 ----------- 1
+//
+PolygonMesh annulus();
+
+//    2 ---- 3   6 ---- 7
+//    |      |   |      |
+//    |  f0  |   |  f1  |
+//    0 ---- 1   4 ---- 5
+//
+PolygonMesh two_squares();
+
+//      <--h01--*
+//    *           |
+//    |           h10
+//   h11          |
+//    |           *
+//      *--h01-->
+//
+PolygonMesh torus();
+
 // Generate a random polygon mesh with a given number of edges
 PolygonMesh random_polygon_mesh(long num_edges, long rng_seed = 0);
 

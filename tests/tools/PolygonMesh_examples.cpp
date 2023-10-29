@@ -99,6 +99,37 @@ PolygonMesh grid()
     return m;
 }
 
+PolygonMesh torus()
+{
+    PolygonMesh m;
+
+    VectorXl next(4);
+    next << 2, 3, 1, 0;
+    m.initialize(next);
+    return m;
+}
+
+PolygonMesh annulus()
+{
+    PolygonMesh m;
+
+    std::vector<std::vector<long>> F(1);
+    F[0] = std::vector<long>({0, 1, 3, 2, 0, 4, 6, 7, 5, 4});
+    m.initialize_fv(F);
+    return m;
+}
+
+PolygonMesh two_squares()
+{
+    PolygonMesh m;
+
+    std::vector<std::vector<long>> F(2);
+    F[0] = std::vector<long>({0, 1, 3, 2});
+    F[1] = std::vector<long>({4, 5, 7, 6});
+    m.initialize_fv(F);
+    return m;
+}
+
 PolygonMesh random_polygon_mesh(long num_edges, long rng_seed)
 {
     PolygonMesh m;
