@@ -49,6 +49,7 @@ TEST_CASE("polygon_initialize", "[mesh_creation],[tuple_polygon]")
 }
 
 
+// Implicitly checks tuple_from_id
 void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_edges, long n_faces)
 {
     SECTION("vertices")
@@ -145,6 +146,88 @@ TEST_CASE("polygon_random_switches", "[tuple_operation],[tuple_polygon]")
                 random_switch(m, t);
                 CHECK(m.is_valid_slow(t));
             }
+        }
+    }
+}
+
+TEST_CASE("polygon_known_switches", "[tuple_operation],[tuple_polygon]")
+{
+    DEBUG_PolygonMesh m = grid();
+    Tuple t = m.halfedge_tuple_from_vertex_in_face(0, 0);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 0);
+    CHECK(m.id(t, PrimitiveType::Face) == 0);
+    bool initial_is_ccw = m.is_ccw(t);
+
+    t = m.switch_tuple(t, PrimitiveType::Vertex);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 1);
+    CHECK(m.id(t, PrimitiveType::Face) == 0);
+    CHECK(m.is_ccw(t) != initial_is_ccw);
+
+    t = m.switch_tuple(t, PrimitiveType::Edge);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 1);
+    CHECK(m.id(t, PrimitiveType::Face) == 0);
+    CHECK(m.is_ccw(t) == initial_is_ccw);
+
+    t = m.switch_tuple(t, PrimitiveType::Face);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 1);
+    CHECK(m.id(t, PrimitiveType::Face) == 1);
+    CHECK(m.is_ccw(t) != initial_is_ccw);
+
+    t = m.next_halfedge(t);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 4);
+    CHECK(m.id(t, PrimitiveType::Face) == 1);
+    CHECK(m.is_ccw(t) != initial_is_ccw);
+
+    t = m.switch_tuple(t, PrimitiveType::Vertex);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 5);
+    CHECK(m.id(t, PrimitiveType::Face) == 1);
+    CHECK(m.is_ccw(t) == initial_is_ccw);
+
+    t = m.prev_halfedge(t);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 2);
+    CHECK(m.id(t, PrimitiveType::Face) == 1);
+    CHECK(m.is_ccw(t) == initial_is_ccw);
+
+    t = m.opp_halfedge(t);
+    CHECK(m.id(t, PrimitiveType::Vertex) == 5);
+    CHECK(m.id(t, PrimitiveType::Face) == 4);
+    CHECK(m.is_ccw(t) == initial_is_ccw);
+}
+
+TEST_CASE("polygon_fixed_point_switches", "[tuple_operation],[tuple_polygon]")
+{
+    DEBUG_PolygonMesh m;
+
+    SECTION("vertices")
+    {
+        m = dual_bubble();
+        const std::vector<Tuple> vertex_tuples = m.get_all(PrimitiveType::Vertex);
+        for (const auto& t : vertex_tuples) {
+            Tuple t_switch = m.switch_tuple(t, PrimitiveType::Vertex);
+            CHECK(m.is_valid_slow(t_switch));
+            CHECK(m.id(t_switch, PrimitiveType::Vertex) == m.id(t, PrimitiveType::Vertex));
+        }
+    }
+
+    SECTION("edges")
+    {
+        m = bubble();
+        const std::vector<Tuple> edge_tuples = m.get_all(PrimitiveType::Edge);
+        for (const auto& t : edge_tuples) {
+            Tuple t_switch = m.switch_tuple(t, PrimitiveType::Edge);
+            CHECK(m.is_valid_slow(t_switch));
+            CHECK(m.id(t_switch, PrimitiveType::Edge) == m.id(t, PrimitiveType::Edge));
+        }
+    }
+
+    SECTION("faces")
+    {
+        m = bubble();
+        const std::vector<Tuple> face_tuples = m.get_all(PrimitiveType::Face);
+        for (const auto& t : face_tuples) {
+            Tuple t_switch = m.switch_tuple(t, PrimitiveType::Face);
+            CHECK(m.is_valid_slow(t_switch));
+            CHECK(m.id(t_switch, PrimitiveType::Face) == m.id(t, PrimitiveType::Face));
         }
     }
 }
@@ -382,6 +465,10 @@ TEST_CASE("polygon_is_boundary", "[tuple_polygon]")
     const Tuple t3 = m.halfedge_tuple_from_vertex_in_face(4, 0);
     CHECK(!m.is_boundary_edge(t3));
     CHECK(!m.is_boundary_vertex(t3));
+
+    const Tuple t4 = m.opp_halfedge(t1);
+    CHECK(!m.is_hole_face(t1));
+    CHECK(m.is_hole_face(t4));
 }
 
 // TODO Test get tuple

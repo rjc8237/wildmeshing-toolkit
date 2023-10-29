@@ -73,28 +73,12 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
 
 Tuple PolygonMesh::next_halfedge(const Tuple& h_tuple) const
 {
-    ConstAccessor<long> next_accessor = create_const_accessor<long>(m_next_handle);
-    long next_h = next_accessor.scalar_attribute(h_tuple);
-
-    return Tuple(
-        h_tuple.m_local_vid,
-        h_tuple.m_local_eid,
-        h_tuple.m_local_fid,
-        next_h,
-        h_tuple.m_hash);
+    return switch_tuple(switch_tuple(h_tuple, PrimitiveType::Vertex), PrimitiveType::Edge);
 }
 
 Tuple PolygonMesh::prev_halfedge(const Tuple& h_tuple) const
 {
-    ConstAccessor<long> prev_accessor = create_const_accessor<long>(m_prev_handle);
-    long prev_h = prev_accessor.scalar_attribute(h_tuple);
-
-    return Tuple(
-        h_tuple.m_local_vid,
-        h_tuple.m_local_eid,
-        h_tuple.m_local_fid,
-        prev_h,
-        h_tuple.m_hash);
+    return switch_tuple(switch_tuple(h_tuple, PrimitiveType::Edge), PrimitiveType::Vertex);
 }
 
 Tuple PolygonMesh::opp_halfedge(const Tuple& h_tuple) const
