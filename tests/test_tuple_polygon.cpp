@@ -9,18 +9,10 @@
 using namespace wmtk;
 using namespace wmtk::tests;
 
-// TODO Make sure we have full coverage of methods
-
 // Count the number of faces that are interior (i.e., not holes) in the mesh
 long count_interior_faces(const DEBUG_PolygonMesh& m, const std::vector<Tuple> faces)
 {
-    long num_interior_faces = 0;
-    for (const auto& face : faces) {
-        if (!m.is_hole_face(face)) {
-            ++num_interior_faces;
-        }
-    }
-    return num_interior_faces;
+    return m.get_all(PrimitiveType::Face).size() - m.count_hole_faces();
 }
 
 
@@ -48,8 +40,7 @@ TEST_CASE("polygon_initialize", "[mesh_creation],[tuple_polygon]")
     CHECK(m.is_valid_slow(halfedges[0]));
 }
 
-
-// Implicitly checks tuple_from_id
+// Check the number of primitive types, and check that tuple_from_id and id compose to the identity
 void check_tuple_generation(const DEBUG_PolygonMesh& m, long n_vertices, long n_edges, long n_faces)
 {
     SECTION("vertices")
@@ -98,6 +89,7 @@ TEST_CASE("glued_polygons", "[tuple_generation],[tuple_polygon]")
     check_tuple_generation(m, 6, 7, 2);
 }
 
+// Randomly switch a vertex, edge, or face of a tuple
 void random_switch(const DEBUG_PolygonMesh& m, Tuple& t)
 {
     switch (rand() % 3) {
@@ -111,6 +103,8 @@ void random_switch(const DEBUG_PolygonMesh& m, Tuple& t)
 
 TEST_CASE("polygon_random_switches", "[tuple_operation],[tuple_polygon]")
 {
+    // Check that random tuple switches are valid on a random mesh
+
     DEBUG_PolygonMesh m = random_polygon_mesh(20);
 
     SECTION("vertices")
@@ -152,6 +146,8 @@ TEST_CASE("polygon_random_switches", "[tuple_operation],[tuple_polygon]")
 
 TEST_CASE("polygon_known_switches", "[tuple_operation],[tuple_polygon]")
 {
+    // Check explicit traversal of a mesh with known face and vertex ids
+
     DEBUG_PolygonMesh m = grid();
     Tuple t = m.halfedge_tuple_from_vertex_in_face(0, 0);
     CHECK(m.id(t, PrimitiveType::Vertex) == 0);
@@ -194,61 +190,68 @@ TEST_CASE("polygon_known_switches", "[tuple_operation],[tuple_polygon]")
     CHECK(m.is_ccw(t) == initial_is_ccw);
 }
 
+
+// Compare vertex, edge, face, and halfedge indices of the tuples
+bool tuple_equal(const DEBUG_PolygonMesh& m, const Tuple& t0, const Tuple& t1)
+{
+    const long v0 = m.id(t0, PrimitiveType::Vertex);
+    const long e0 = m.id(t0, PrimitiveType::Edge);
+    const long f0 = m.id(t0, PrimitiveType::Face);
+    const long h0 = m.id(t0, PrimitiveType::HalfEdge);
+
+    const long v1 = m.id(t1, PrimitiveType::Vertex);
+    const long e1 = m.id(t1, PrimitiveType::Edge);
+    const long f1 = m.id(t1, PrimitiveType::Face);
+    const long h1 = m.id(t1, PrimitiveType::HalfEdge);
+
+    return (v0 == v1) && (e0 == e1) && (f0 == f1) && (h0 == h1);
+}
+
 TEST_CASE("polygon_fixed_point_switches", "[tuple_operation],[tuple_polygon]")
 {
+    // Check that tuple switches are valid and do not have fixed points on meshes with a single
+    // vertex, edge, and face
+
     DEBUG_PolygonMesh m;
 
-    SECTION("vertices")
+    SECTION("vertex_fixed")
     {
         m = dual_bubble();
         const std::vector<Tuple> vertex_tuples = m.get_all(PrimitiveType::Vertex);
         for (const auto& t : vertex_tuples) {
             Tuple t_switch = m.switch_tuple(t, PrimitiveType::Vertex);
             CHECK(m.is_valid_slow(t_switch));
+            CHECK(!t.same_ids(t_switch));
             CHECK(m.id(t_switch, PrimitiveType::Vertex) == m.id(t, PrimitiveType::Vertex));
         }
     }
 
-    SECTION("edges")
+    SECTION("edge_fixed")
     {
         m = bubble();
         const std::vector<Tuple> edge_tuples = m.get_all(PrimitiveType::Edge);
         for (const auto& t : edge_tuples) {
             Tuple t_switch = m.switch_tuple(t, PrimitiveType::Edge);
             CHECK(m.is_valid_slow(t_switch));
+            CHECK(!t.same_ids(t_switch));
             CHECK(m.id(t_switch, PrimitiveType::Edge) == m.id(t, PrimitiveType::Edge));
         }
     }
 
-    SECTION("faces")
+    SECTION("face_fixed")
     {
         m = bubble();
         const std::vector<Tuple> face_tuples = m.get_all(PrimitiveType::Face);
         for (const auto& t : face_tuples) {
             Tuple t_switch = m.switch_tuple(t, PrimitiveType::Face);
             CHECK(m.is_valid_slow(t_switch));
+            CHECK(!t.same_ids(t_switch));
             CHECK(m.id(t_switch, PrimitiveType::Face) == m.id(t, PrimitiveType::Face));
         }
     }
 }
 
-// Compare vertex, edge, face, and halfedge indices of the tuples
-bool tuple_equal(const DEBUG_PolygonMesh& m, const Tuple& t0, const Tuple& t1)
-{
-    const auto l = wmtk::logger().level();
-    wmtk::logger().set_level(spdlog::level::err);
-    const long v0 = m.id(t0, PrimitiveType::Vertex);
-    const long e0 = m.id(t0, PrimitiveType::Edge);
-    const long f0 = m.id(t0, PrimitiveType::Face);
-    const long h0 = m.id(t0, PrimitiveType::HalfEdge);
-    const long v1 = m.id(t1, PrimitiveType::Vertex);
-    const long e1 = m.id(t1, PrimitiveType::Edge);
-    const long f1 = m.id(t1, PrimitiveType::Face);
-    const long h1 = m.id(t1, PrimitiveType::HalfEdge);
-    wmtk::logger().set_level(l);
-    return (v0 == v1) && (e0 == e1) && (f0 == f1) && (h0 == h1);
-}
-
+// Check that primitive switches are their own inverse for a given tuple
 void check_double_switches(const DEBUG_PolygonMesh& m, const Tuple& t)
 {
     const Tuple t_after_v = m.switch_vertex(m.switch_vertex(t));
@@ -261,11 +264,6 @@ void check_double_switches(const DEBUG_PolygonMesh& m, const Tuple& t)
 
 TEST_CASE("polygon_double_switches", "[tuple_operation],[tuple_polygon]")
 {
-    // checking for every tuple t:
-    // (1) t.switch_vertex().switch_vertex() == t
-    // (2) t.switch_edge().switch_edge() == t
-    // (3) t.switch_tri().switch_tri() == t
-
     DEBUG_PolygonMesh m = random_polygon_mesh(20);
 
     SECTION("vertices")
@@ -291,6 +289,7 @@ TEST_CASE("polygon_double_switches", "[tuple_operation],[tuple_polygon]")
     }
 }
 
+// Check that next and prev are inverse for a given tuple
 void check_next_prev(const DEBUG_PolygonMesh& m, const Tuple& t)
 {
     const Tuple t_pn = m.next_halfedge(m.prev_halfedge(t));
@@ -326,6 +325,7 @@ TEST_CASE("polygon_next_prev", "[tuple_operation],[tuple_polygon]")
     }
 }
 
+// Check that opp is its own inverse for a given tuple
 void check_opp_opp(const DEBUG_PolygonMesh& m, const Tuple& t)
 {
     const Tuple t_iter = m.opp_halfedge(m.opp_halfedge(t));
@@ -359,6 +359,7 @@ TEST_CASE("polygon_opp_opp", "[tuple_operation],[tuple_polygon]")
     }
 }
 
+// Check that next-next-next is the identity for a given tuple (for a triangle)
 void check_next_next_next(const DEBUG_PolygonMesh& m, const Tuple& t)
 {
     const Tuple t_iter = m.next_halfedge(m.next_halfedge(m.next_halfedge(t)));
@@ -407,6 +408,7 @@ TEST_CASE("polygon_one_ring_iteration", "[tuple_operation],[tuple_polygon]")
         m.initialize_fv(tris);
     }
 
+    // Check that alternately switching edges and faces circulates around a vertex
     const std::vector<Tuple> vertices = m.get_all(PrimitiveType::Vertex);
     REQUIRE(vertices.size() == 7);
     for (const auto& t : vertices) {
@@ -438,6 +440,7 @@ TEST_CASE("polygon_is_boundary", "[tuple_polygon]")
 {
     DEBUG_PolygonMesh m = grid();
 
+    // Check boundary edge count
     size_t n_boundary_edges = 0;
     for (const Tuple& e : m.get_all(PrimitiveType::Edge)) {
         if (m.is_boundary(e)) {
@@ -446,6 +449,7 @@ TEST_CASE("polygon_is_boundary", "[tuple_polygon]")
     }
     CHECK(n_boundary_edges == 8);
 
+    // Check boundary vertex count
     size_t n_boundary_vertices = 0;
     for (const Tuple& v : m.get_all(PrimitiveType::Vertex)) {
         if (m.is_boundary_vertex(v)) {
@@ -454,18 +458,22 @@ TEST_CASE("polygon_is_boundary", "[tuple_polygon]")
     }
     CHECK(n_boundary_vertices == 8);
 
+    // Check a tuple with vertex and edge on the boundary
     const Tuple t1 = m.halfedge_tuple_from_vertex_in_face(0, 0);
     CHECK(m.is_boundary_edge(t1));
     CHECK(m.is_boundary_vertex(t1));
 
+    // Check a tuple with vertex but not edge on the boundary
     const Tuple t2 = m.halfedge_tuple_from_vertex_in_face(1, 0);
     CHECK(!m.is_boundary_edge(t2));
     CHECK(m.is_boundary_vertex(t2));
 
+    // Check a tuple with neither vertex nor edge on the boundary
     const Tuple t3 = m.halfedge_tuple_from_vertex_in_face(4, 0);
     CHECK(!m.is_boundary_edge(t3));
     CHECK(!m.is_boundary_vertex(t3));
 
+    // Check hole face
     const Tuple t4 = m.opp_halfedge(t1);
     CHECK(!m.is_hole_face(t1));
     CHECK(m.is_hole_face(t4));

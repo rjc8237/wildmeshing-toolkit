@@ -71,126 +71,6 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
     }
 }
 
-Tuple PolygonMesh::next_halfedge(const Tuple& h_tuple) const
-{
-    return switch_tuple(switch_tuple(h_tuple, PrimitiveType::Vertex), PrimitiveType::Edge);
-}
-
-Tuple PolygonMesh::prev_halfedge(const Tuple& h_tuple) const
-{
-    return switch_tuple(switch_tuple(h_tuple, PrimitiveType::Edge), PrimitiveType::Vertex);
-}
-
-Tuple PolygonMesh::opp_halfedge(const Tuple& h_tuple) const
-{
-    long h = h_tuple.m_global_cid;
-    long edge_hid = h % 2; // Local id for the halfedge with implicit opp
-    return Tuple(
-        h_tuple.m_local_vid,
-        h_tuple.m_local_eid,
-        h_tuple.m_local_fid,
-        (edge_hid == 0) ? (h + 1) : (h - 1),
-        h_tuple.m_hash);
-}
-
-bool PolygonMesh::is_connectivity_valid() const
-{
-    ConstAccessor<char> v_flag_accessor = get_flag_accessor(PrimitiveType::Vertex);
-    ConstAccessor<char> e_flag_accessor = get_flag_accessor(PrimitiveType::Edge);
-    ConstAccessor<char> f_flag_accessor = get_flag_accessor(PrimitiveType::Face);
-    ConstAccessor<char> h_flag_accessor = get_flag_accessor(PrimitiveType::HalfEdge);
-
-    // Halfedge connectivity
-    long n_halfedges = 0;
-    for (long hid = 0; hid < capacity(PrimitiveType::HalfEdge); ++hid) {
-        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
-            continue;
-        } else {
-            ++n_halfedges;
-        }
-
-        if (!is_halfedge_connectivity_valid(hid)) {
-            return false;
-        }
-    }
-
-    // Vertex Connectivity
-    // TODO Check vertex boundary conditions
-    long n_vertices = 0;
-    for (long vid = 0; vid < capacity(PrimitiveType::Vertex); ++vid) {
-        if (v_flag_accessor.index_access().scalar_attribute(vid) == 0) {
-            continue;
-        } else {
-            ++n_vertices;
-        }
-
-        if (!is_vertex_connectivity_valid(vid)) {
-            return false;
-        }
-    }
-
-    // Edge Connectivity
-    long n_edges = 0;
-    for (long eid = 0; eid < capacity(PrimitiveType::Edge); ++eid) {
-        if (e_flag_accessor.index_access().scalar_attribute(eid) == 0) {
-            continue;
-        } else {
-            ++n_edges;
-        }
-
-        if (!is_edge_connectivity_valid(eid)) {
-            return false;
-        }
-    }
-
-    // Face Connectivity
-    long n_faces = 0;
-    for (long fid = 0; fid < capacity(PrimitiveType::Face); ++fid) {
-        if (f_flag_accessor.index_access().scalar_attribute(fid) == 0) {
-            continue;
-        } else {
-            ++n_faces;
-        }
-
-        if (!is_face_connectivity_valid(fid)) {
-            return false;
-        }
-    }
-
-    // Check element counts
-    if (n_halfedges != (2 * n_edges)) {
-        return false;
-    }
-    if (n_vertices != count_vertices_slow()) {
-        return false;
-    }
-    if (n_faces != count_faces_slow()) {
-        return false;
-    }
-
-    return true;
-}
-
-bool PolygonMesh::is_local_connectivity_valid(const Tuple& tuple, PrimitiveType type) const
-{
-    switch (type) {
-    case PrimitiveType::Vertex: {
-        return is_vertex_connectivity_valid(id(tuple, type));
-    }
-    case PrimitiveType::Edge: {
-        return is_edge_connectivity_valid(id(tuple, type));
-    }
-    case PrimitiveType::Face: {
-        return is_face_connectivity_valid(id(tuple, type));
-    }
-    case PrimitiveType::HalfEdge: {
-        return is_halfedge_connectivity_valid(id(tuple, type));
-    }
-    case PrimitiveType::Tetrahedron:
-    default: throw std::runtime_error("Invalid primitive type"); break;
-    }
-}
-
 Tuple PolygonMesh::tuple_from_id(const PrimitiveType type, const long gid) const
 {
     // TODO Need to get hashes
@@ -218,16 +98,108 @@ Tuple PolygonMesh::tuple_from_id(const PrimitiveType type, const long gid) const
     }
 }
 
+bool PolygonMesh::is_connectivity_valid() const
+{
+    ConstAccessor<char> v_flag_accessor = get_flag_accessor(PrimitiveType::Vertex);
+    ConstAccessor<char> e_flag_accessor = get_flag_accessor(PrimitiveType::Edge);
+    ConstAccessor<char> f_flag_accessor = get_flag_accessor(PrimitiveType::Face);
+    ConstAccessor<char> h_flag_accessor = get_flag_accessor(PrimitiveType::HalfEdge);
+
+    // Halfedge connectivity
+    long n_halfedges = 0;
+    for (long hid = 0; hid < capacity(PrimitiveType::HalfEdge); ++hid) {
+        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+            continue;
+        } else {
+            ++n_halfedges;
+        }
+
+        if (!is_halfedge_connectivity_valid(hid)) {
+            return false;
+        }
+    }
+
+    // Vertex Connectivity
+    // TODO Check vertex boundary conditions
+    long n_vertices = 0;
+    for (long vid = 0; vid < capacity(PrimitiveType::Vertex); ++vid) {
+        // Count vertices
+        if (v_flag_accessor.index_access().scalar_attribute(vid) == 0) {
+            continue;
+        } else {
+            ++n_vertices;
+        }
+
+        // Check local vertex validity
+        if (!is_vertex_connectivity_valid(vid)) {
+            return false;
+        }
+    }
+
+    // Edge Connectivity
+    long n_edges = 0;
+    for (long eid = 0; eid < capacity(PrimitiveType::Edge); ++eid) {
+        // Count edges
+        if (e_flag_accessor.index_access().scalar_attribute(eid) == 0) {
+            continue;
+        } else {
+            ++n_edges;
+        }
+
+        // Check local edge validity
+        if (!is_edge_connectivity_valid(eid)) {
+            return false;
+        }
+    }
+
+    // Face Connectivity
+    long n_faces = 0;
+    for (long fid = 0; fid < capacity(PrimitiveType::Face); ++fid) {
+        // Count faces
+        if (f_flag_accessor.index_access().scalar_attribute(fid) == 0) {
+            continue;
+        } else {
+            ++n_faces;
+        }
+
+        // Check local face validity
+        if (!is_face_connectivity_valid(fid)) {
+            return false;
+        }
+    }
+
+    // Check element counts are consistent
+    if (n_halfedges != (2 * n_edges)) {
+        return false;
+    }
+    if (n_vertices != count_vertices_slow()) {
+        return false;
+    }
+    if (n_faces != count_faces_slow()) {
+        return false;
+    }
+
+    return true;
+}
+
+bool PolygonMesh::is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const
+{
+    if (tuple.is_null()) return false;
+    if (tuple.m_global_cid < 0) {
+        return false;
+    }
+
+    // Check if local vid is in {0, 1}
+    if ((tuple.m_local_vid != 0) && (tuple.m_local_vid != 1)) {
+        return false;
+    }
+
+    return Mesh::is_hash_valid(tuple, hash_accessor);
+}
+
 bool PolygonMesh::is_ccw(const Tuple& tuple) const
 {
     return (tuple.m_local_vid == 0);
-}
-
-bool PolygonMesh::is_hole_face(const Tuple& f_tuple) const
-{
-    ConstAccessor<char> f_is_hole_accessor = create_const_accessor<char>(m_f_is_hole_handle);
-    auto f_is_hole = f_is_hole_accessor.scalar_attribute(f_tuple);
-    return (f_is_hole == 1);
 }
 
 bool PolygonMesh::is_boundary(const Tuple& tuple) const
@@ -253,19 +225,52 @@ bool PolygonMesh::is_boundary_edge(const Tuple& tuple) const
     return (is_hole_face(tuple)) || (is_hole_face(opp_halfedge(tuple)));
 }
 
-bool PolygonMesh::is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const
+Tuple PolygonMesh::next_halfedge(const Tuple& h_tuple) const
 {
-    if (tuple.is_null()) return false;
-    if (tuple.m_global_cid < 0) {
-        return false;
-    }
+    return switch_tuple(switch_tuple(h_tuple, PrimitiveType::Vertex), PrimitiveType::Edge);
+}
 
-    // Check if local vid is in {0, 1}
-    if ((tuple.m_local_vid != 0) && (tuple.m_local_vid != 1)) {
-        return false;
-    }
+Tuple PolygonMesh::prev_halfedge(const Tuple& h_tuple) const
+{
+    return switch_tuple(switch_tuple(h_tuple, PrimitiveType::Edge), PrimitiveType::Vertex);
+}
 
-    return Mesh::is_hash_valid(tuple, hash_accessor);
+Tuple PolygonMesh::opp_halfedge(const Tuple& h_tuple) const
+{
+    long h = h_tuple.m_global_cid;
+    return Tuple(
+        h_tuple.m_local_vid,
+        h_tuple.m_local_eid,
+        h_tuple.m_local_fid,
+        implicit_opp(h),
+        h_tuple.m_hash);
+}
+
+bool PolygonMesh::is_local_connectivity_valid(const Tuple& tuple, PrimitiveType type) const
+{
+    switch (type) {
+    case PrimitiveType::Vertex: {
+        return is_vertex_connectivity_valid(id(tuple, type));
+    }
+    case PrimitiveType::Edge: {
+        return is_edge_connectivity_valid(id(tuple, type));
+    }
+    case PrimitiveType::Face: {
+        return is_face_connectivity_valid(id(tuple, type));
+    }
+    case PrimitiveType::HalfEdge: {
+        return is_halfedge_connectivity_valid(id(tuple, type));
+    }
+    case PrimitiveType::Tetrahedron:
+    default: throw std::runtime_error("Invalid primitive type"); break;
+    }
+}
+
+bool PolygonMesh::is_hole_face(const Tuple& f_tuple) const
+{
+    ConstAccessor<char> f_is_hole_accessor = create_const_accessor<char>(m_f_is_hole_handle);
+    auto f_is_hole = f_is_hole_accessor.scalar_attribute(f_tuple);
+    return (f_is_hole == 1);
 }
 
 void PolygonMesh::initialize(

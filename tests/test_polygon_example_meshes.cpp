@@ -16,7 +16,6 @@ struct MeshDebugInfo
     long boundary_curves = -1; // number of distinct boundary curves in the mesh
     long genus = -1; // TODO (also what definition of genus?)
     long simply_connected_components = -1; // TODO (face-face connected topologies)
-    bool is_oriented = false; // TODO (make sure nface neighbors use opposite orientation
     // the number of simplices (vertex, edge, face, then halfedge)
     std::array<long, 4> primitive_counts = std::array<long, 4>{{-1, -1, -1, -1}};
 };
