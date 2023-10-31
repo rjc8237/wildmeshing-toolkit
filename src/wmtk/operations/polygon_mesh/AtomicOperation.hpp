@@ -40,6 +40,7 @@ private:
     Accessor<long> m_hv_accessor;
     Accessor<long> m_fh_accessor;
     Accessor<long> m_vh_accessor;
+    Accessor<char> m_f_is_hole_accessor;
 
     Accessor<char> m_v_flag_accessor;
     Accessor<char> m_e_flag_accessor;

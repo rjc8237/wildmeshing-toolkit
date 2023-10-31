@@ -30,6 +30,17 @@ public:
 
     using PolygonMeshOperation::hash_accessor;
 
+    /**
+     * @brief Check the precondition that the mesh remains manifold after the splice.
+     *
+     * Splice always produces a manifold connectivity if there are no hole faces, but nonmanifold
+     * vertices are possible on a mesh with boundary.
+     *
+     * @return true if the mesh remains manifold
+     * @return false otherwise
+     */
+    bool precondition();
+
 protected:
     bool execute() override;
 
@@ -39,7 +50,6 @@ private:
     Tuple m_first_tuple;
     Tuple m_second_tuple;
 
-    bool is_manifold_after_splice();
     bool is_hole(long face_id) const;
     long next_after_splice(long h);
 };

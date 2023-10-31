@@ -18,6 +18,7 @@ AtomicOperation::AtomicOperation(PolygonMesh& m)
     , m_hv_accessor(m.create_accessor<long>(m.m_hv_handle))
     , m_fh_accessor(m.create_accessor<long>(m.m_fh_handle))
     , m_vh_accessor(m.create_accessor<long>(m.m_vh_handle))
+    , m_f_is_hole_accessor(m.create_accessor<char>(m.m_f_is_hole_handle))
     , m_v_flag_accessor(m.get_flag_accessor(PrimitiveType::Vertex))
     , m_e_flag_accessor(m.get_flag_accessor(PrimitiveType::Edge))
     , m_f_flag_accessor(m.get_flag_accessor(PrimitiveType::Face))
@@ -31,8 +32,9 @@ AtomicOperation::AtomicOperation(Mesh& m)
 long AtomicOperation::new_face(bool is_hole)
 {
     mesh().reserve_attributes(PrimitiveType::Face, mesh().capacity(PrimitiveType::Face) + 1);
-    long f_id = mesh().request_simplex_indices(PrimitiveType::Face, 1)[0];
-    return is_hole ? -f_id : f_id;
+    long fid = mesh().request_simplex_indices(PrimitiveType::Face, 1)[0];
+    m_f_is_hole_accessor.index_access().scalar_attribute(fid) = is_hole ? 1 : 0;
+    return fid;
 }
 
 long AtomicOperation::new_edge()

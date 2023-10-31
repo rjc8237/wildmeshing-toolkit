@@ -11,13 +11,13 @@ class DeleteBubble;
 template <>
 struct OperationSettings<polygon_mesh::DeleteBubble>
 {
-    // TODO Determine if operation settings are necessary
 };
 
 namespace polygon_mesh {
 
 /**
- * @class Atomic operation for removing a bubble component with a single edge.
+ * @class Atomic operation for removing a bubble component consisting of a single edge with two
+ * distinct endpoints and a single face.
  */
 class DeleteBubble : public AtomicOperation
 {
@@ -29,11 +29,20 @@ public:
 
     using PolygonMeshOperation::hash_accessor;
 
+    /**
+     * @brief Check the precondition that the tuple specifies a bubble component edge.
+     *
+     * @return true if the tuple specifies a bubble edge
+     * @return false otherwise
+     */
+    bool precondition();
+
 protected:
     bool execute() override;
 
 private:
     const OperationSettings<DeleteBubble>& m_settings;
+    Tuple m_tuple;
 };
 
 } // namespace polygon_mesh

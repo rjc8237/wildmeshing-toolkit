@@ -25,10 +25,7 @@ std::string Splice::name() const
 
 bool Splice::execute()
 {
-    // Check boundary vertex conditions
-    if (!is_manifold_after_splice()) {
-        return false;
-    }
+    assert(precondition());
 
     // Old halfedge indices
     long old_h_id = get_halfedge_from_tuple(m_first_tuple);
@@ -100,7 +97,7 @@ long Splice::next_after_splice(long h)
     }
 }
 
-bool Splice::is_manifold_after_splice()
+bool Splice::precondition()
 {
     long old_h_id = get_halfedge_from_tuple(m_first_tuple);
     long old_g_id = get_halfedge_from_tuple(m_second_tuple);

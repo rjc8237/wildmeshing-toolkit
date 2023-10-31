@@ -11,7 +11,6 @@ class MakeEdge;
 template <>
 struct OperationSettings<polygon_mesh::MakeEdge>
 {
-    // TODO Determine if operation settings are necessary
 };
 
 namespace polygon_mesh {

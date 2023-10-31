@@ -33,7 +33,15 @@ bool MakeEdge::execute()
     set_face(hij_id, f_id);
     set_face(hji_id, f_id);
 
+    // Record output tuple
+    m_output_tuple = mesh().tuple_from_id(PrimitiveType::Edge, e_id);
+
     return true;
+}
+
+Tuple MakeEdge::return_tuple() const
+{
+    return m_output_tuple;
 }
 
 } // namespace wmtk::operations::polygon_mesh
