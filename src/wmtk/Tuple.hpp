@@ -8,6 +8,7 @@ namespace wmtk {
 class Mesh;
 class PointMesh;
 class TriMesh;
+class PolygonMesh;
 class EdgeMesh;
 class TetMesh;
 namespace utils {
@@ -38,6 +39,7 @@ public:
     friend class PointMesh;
     friend class EdgeMesh;
     friend class TriMesh;
+    friend class PolygonMesh;
     friend class TetMesh;
     friend class operations::Operation;
     friend class MultiMeshManager;
