@@ -131,6 +131,23 @@ bool Splice::precondition()
     return (num_boundary_edges <= 2);
 }
 
+bool Splice::is_topology_preserving()
+{
+    // halfedge indices
+    long h_id = get_halfedge_from_tuple(m_first_tuple);
+    long g_id = get_halfedge_from_tuple(m_second_tuple);
+
+    // face indices
+    long hf_id = get_face(h_id);
+    long gf_id = get_face(g_id);
+
+    // Old vertex indices
+    long hv_id = get_vertex(h_id);
+    long gv_id = get_vertex(g_id);
+
+    return ((hf_id == gf_id) && (hv_id != gv_id)) || ((hf_id != gf_id) && (hv_id == gv_id));
+}
+
 bool Splice::is_hole(long face_id) const
 {
     return mesh().is_hole_face(mesh().tuple_from_id(PrimitiveType::Face, face_id));

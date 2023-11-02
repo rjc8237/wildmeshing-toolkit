@@ -41,6 +41,14 @@ public:
      */
     bool precondition();
 
+    /**
+     * @brief Determine if the splice preserves the topology of the original mesh
+     *
+     * @return true if the splice will preserve the topology
+     * @return false otherwise
+     */
+    bool is_topology_preserving();
+
 protected:
     bool execute() override;
 
