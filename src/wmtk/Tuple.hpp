@@ -12,7 +12,7 @@ class PolygonMesh;
 class EdgeMesh;
 class TetMesh;
 namespace utils {
-struct TupleInspector;
+class TupleInspector;
 }
 namespace operations {
 class Operation;
