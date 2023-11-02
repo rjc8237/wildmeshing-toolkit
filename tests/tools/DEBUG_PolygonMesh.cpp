@@ -183,7 +183,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
     // Halfedge connectivity
     long n_halfedges = 0;
     for (long hid = 0; hid < capacity(PrimitiveType::HalfEdge); ++hid) {
-        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+        if (get_index_access(h_flag_accessor).scalar_attribute(hid) == 0) {
             continue;
         } else {
             ++n_halfedges;
@@ -199,7 +199,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
     long n_vertices = 0;
     for (long vid = 0; vid < capacity(PrimitiveType::Vertex); ++vid) {
         // Count vertices
-        if (v_flag_accessor.index_access().scalar_attribute(vid) == 0) {
+        if (get_index_access(v_flag_accessor).scalar_attribute(vid) == 0) {
             continue;
         } else {
             ++n_vertices;
@@ -215,7 +215,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
     long n_edges = 0;
     for (long eid = 0; eid < capacity(PrimitiveType::Edge); ++eid) {
         // Count edges
-        if (e_flag_accessor.index_access().scalar_attribute(eid) == 0) {
+        if (get_index_access(e_flag_accessor).scalar_attribute(eid) == 0) {
             continue;
         } else {
             ++n_edges;
@@ -231,7 +231,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
     long n_faces = 0;
     for (long fid = 0; fid < capacity(PrimitiveType::Face); ++fid) {
         // Count faces
-        if (f_flag_accessor.index_access().scalar_attribute(fid) == 0) {
+        if (get_index_access(f_flag_accessor).scalar_attribute(fid) == 0) {
             continue;
         } else {
             ++n_faces;
@@ -286,7 +286,7 @@ bool DEBUG_PolygonMesh::is_vertex_connectivity_valid(long vid) const
 
     // Vertex is not deleted
     ConstAccessor<char> v_flag_accessor = get_flag_accessor(PrimitiveType::Vertex);
-    if (v_flag_accessor.index_access().scalar_attribute(vid) == 0) {
+    if (get_index_access(v_flag_accessor).scalar_attribute(vid) == 0) {
         return false;
     }
 
@@ -294,12 +294,12 @@ bool DEBUG_PolygonMesh::is_vertex_connectivity_valid(long vid) const
     ConstAccessor<long> out_accessor = create_const_accessor<long>(m_out_handle);
     ConstAccessor<long> to_accessor = create_const_accessor<long>(m_to_handle);
     ConstAccessor<long> prev_accessor = create_const_accessor<long>(m_prev_handle);
-    long hid_start = implicit_opp(out_accessor.index_access().scalar_attribute(vid));
+    long hid_start = implicit_opp(get_index_access(out_accessor).scalar_attribute(vid));
     long hid_iter = hid_start;
     long n_halfedges = capacity(PrimitiveType::HalfEdge);
     long n_circulations = 0;
     do {
-        if (to_accessor.index_access().scalar_attribute(hid_iter) != vid) {
+        if (get_index_access(to_accessor).scalar_attribute(hid_iter) != vid) {
             return false;
         }
         if (n_circulations > n_halfedges) {
@@ -307,7 +307,7 @@ bool DEBUG_PolygonMesh::is_vertex_connectivity_valid(long vid) const
         }
 
         // Circulate halfedge around vertex
-        hid_iter = prev_accessor.index_access().scalar_attribute(implicit_opp(hid_iter));
+        hid_iter = get_index_access(prev_accessor).scalar_attribute(implicit_opp(hid_iter));
         ++n_circulations;
     } while (hid_iter != hid_start);
 
@@ -323,7 +323,7 @@ bool DEBUG_PolygonMesh::is_edge_connectivity_valid(long eid) const
 
     // Edge is not deleted
     ConstAccessor<char> e_flag_accessor = get_flag_accessor(PrimitiveType::Edge);
-    if (e_flag_accessor.index_access().scalar_attribute(eid) == 0) {
+    if (get_index_access(e_flag_accessor).scalar_attribute(eid) == 0) {
         return false;
     }
 
@@ -345,7 +345,7 @@ bool DEBUG_PolygonMesh::is_face_connectivity_valid(long fid) const
 
     // Face is not deleted
     ConstAccessor<char> f_flag_accessor = get_flag_accessor(PrimitiveType::Face);
-    if (f_flag_accessor.index_access().scalar_attribute(fid) == 0) {
+    if (get_index_access(f_flag_accessor).scalar_attribute(fid) == 0) {
         return false;
     }
 
@@ -353,12 +353,12 @@ bool DEBUG_PolygonMesh::is_face_connectivity_valid(long fid) const
     ConstAccessor<long> fh_accessor = create_const_accessor<long>(m_fh_handle);
     ConstAccessor<long> hf_accessor = create_const_accessor<long>(m_hf_handle);
     ConstAccessor<long> next_accessor = create_const_accessor<long>(m_next_handle);
-    long hid_start = fh_accessor.index_access().scalar_attribute(fid);
+    long hid_start = get_index_access(fh_accessor).scalar_attribute(fid);
     long hid_iter = hid_start;
     long n_halfedges = capacity(PrimitiveType::HalfEdge);
     long n_circulations = 0;
     do {
-        if (hf_accessor.index_access().scalar_attribute(hid_iter) != fid) {
+        if (get_index_access(hf_accessor).scalar_attribute(hid_iter) != fid) {
             return false;
         }
         if (n_circulations > n_halfedges) {
@@ -366,7 +366,7 @@ bool DEBUG_PolygonMesh::is_face_connectivity_valid(long fid) const
         }
 
         // Circulate halfedge around face
-        hid_iter = next_accessor.index_access().scalar_attribute(hid_iter);
+        hid_iter = get_index_access(next_accessor).scalar_attribute(hid_iter);
         ++n_circulations;
     } while (hid_iter != hid_start);
 
@@ -384,7 +384,7 @@ bool DEBUG_PolygonMesh::is_halfedge_connectivity_valid(long hid) const
 
     // Halfedge is not deleted
     ConstAccessor<char> h_flag_accessor = get_flag_accessor(PrimitiveType::HalfEdge);
-    if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+    if (get_index_access(h_flag_accessor).scalar_attribute(hid) == 0) {
         wmtk::logger().error("halfedge {} is deleted", hid);
         return false;
     }
@@ -392,14 +392,14 @@ bool DEBUG_PolygonMesh::is_halfedge_connectivity_valid(long hid) const
     // next and prev are (locally) inverse
     ConstAccessor<long> next_accessor = create_const_accessor<long>(m_next_handle);
     ConstAccessor<long> prev_accessor = create_const_accessor<long>(m_prev_handle);
-    long hid_next = next_accessor.index_access().scalar_attribute(hid);
-    long hid_np = prev_accessor.index_access().scalar_attribute(hid_next);
+    long hid_next = get_index_access(next_accessor).scalar_attribute(hid);
+    long hid_np = get_index_access(prev_accessor).scalar_attribute(hid_next);
     if (hid_np != hid) {
         wmtk::logger().error("halfedge {} is next of {} but has prev {}", hid_next, hid, hid_np);
         return false;
     }
-    long hid_prev = prev_accessor.index_access().scalar_attribute(hid);
-    long hid_pn = next_accessor.index_access().scalar_attribute(hid_prev);
+    long hid_prev = get_index_access(prev_accessor).scalar_attribute(hid);
+    long hid_pn = get_index_access(next_accessor).scalar_attribute(hid_prev);
     if (hid_pn != hid) {
         wmtk::logger().error("halfedge {} is prev of {} but has next {}", hid_prev, hid, hid_pn);
         return false;
@@ -419,7 +419,7 @@ long DEBUG_PolygonMesh::count_vertices_from_orbits() const
     vertex_cycles.reserve(n_halfedges);
     for (long hid = 0; hid < n_halfedges; ++hid) {
         // Skip deleted halfedges
-        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+        if (get_index_access(h_flag_accessor).scalar_attribute(hid) == 0) {
             return false;
         }
 
@@ -431,7 +431,7 @@ long DEBUG_PolygonMesh::count_vertices_from_orbits() const
                 visited[hid_iter] = true;
                 vertex_cycles.back().push_back(hid_iter);
                 hid_iter = implicit_opp(hid_iter);
-                hid_iter = prev_accessor.index_access().scalar_attribute(hid_iter);
+                hid_iter = get_index_access(prev_accessor).scalar_attribute(hid_iter);
                 if (hid_iter == hid) {
                     break;
                 }
@@ -453,7 +453,7 @@ long DEBUG_PolygonMesh::count_faces_from_orbits() const
     face_cycles.reserve(n_halfedges);
     for (long hid = 0; hid < n_halfedges; ++hid) {
         // Skip deleted halfedges
-        if (h_flag_accessor.index_access().scalar_attribute(hid) == 0) {
+        if (get_index_access(h_flag_accessor).scalar_attribute(hid) == 0) {
             return false;
         }
 
@@ -464,7 +464,7 @@ long DEBUG_PolygonMesh::count_faces_from_orbits() const
             while (true) {
                 visited[hid_iter] = true;
                 face_cycles.back().push_back(hid_iter);
-                hid_iter = next_accessor.index_access().scalar_attribute(hid_iter);
+                hid_iter = get_index_access(next_accessor).scalar_attribute(hid_iter);
                 if (hid_iter == hid) {
                     break;
                 }
