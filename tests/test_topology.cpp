@@ -299,21 +299,37 @@ TEST_CASE("topology_of_complex_polygon_meshes", "[topology][polygon]")
     Eigen::Matrix<long, -1, -1> F;
 
     std::vector<std::string> names = {
-        "/Octocat.obj",
-        "/armadillo.obj",
-        "/blub.obj",
-        "/bunny.obj",
-        "/circle.obj",
-        "/fan.obj",
-        "/sphere.obj",
-        "/test_triwild.obj",
-        "/hemisphere.obj"};
+        "/Octocat.msh",
+        "/armadillo.msh",
+        "/blub.msh",
+        //"/bunny.msh", // TODO Include to test unreferenced vertices
+        "/circle.msh",
+        "/fan.msh",
+        "/sphere.msh",
+        "/test_triwild.msh",
+        "/hemisphere.msh"};
 
     for (auto name : names) {
+        // TODO This same code is used in the tri mesh test and should be a helper function
         std::string path;
         path.append(WMTK_DATA_DIR);
         path.append(name);
-        igl::read_triangle_mesh(path, V, F);
+        auto tmp = read_mesh(path);
+        const auto& mesh = static_cast<wmtk::tests::DEBUG_TriMesh&>(*tmp);
+        const auto& tris = mesh.get_all(PrimitiveType::Face);
+        F.resize(tris.size(), 3);
+        for (size_t i = 0; i < tris.size(); ++i) {
+            const auto& t = tris[i];
+            auto t1 = mesh.switch_tuple(t, PrimitiveType::Vertex);
+            auto t2 =
+                mesh.switch_tuple(mesh.switch_tuple(t, PrimitiveType::Edge), PrimitiveType::Vertex);
+
+            long vid0 = mesh.id(t, PrimitiveType::Vertex);
+            long vid1 = mesh.id(t1, PrimitiveType::Vertex);
+            long vid2 = mesh.id(t2, PrimitiveType::Vertex);
+            F.row(i) << vid0, vid1, vid2;
+        }
+
         auto [next, prev, to, out, he2f, f2he, bnd_loops] =
             utils::polygon_mesh_fv_topology_initialization(F);
 
