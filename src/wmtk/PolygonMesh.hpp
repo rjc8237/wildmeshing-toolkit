@@ -64,15 +64,6 @@ public:
     Tuple opp_halfedge(const Tuple& h_tuple) const;
 
     /**
-     * @brief Determine if the local connectivity for a primitive specified by tuple is valid
-     *
-     * @param tuple: tuple to check
-     * @param type: primitive of the tuple to check
-     * @return true iff the connectivity corresponding to the primitive is valid
-     */
-    bool is_local_connectivity_valid(const Tuple& tuple, PrimitiveType type) const;
-
-    /**
      * @brief Check if a face is a hole (i.e., not part of the surface)
      *
      * @param f_tuple: tuple specifying a face
@@ -135,58 +126,6 @@ protected:
     attribute::MeshAttributeHandle<long> m_fh_handle; // Face -> any adjacent HalfEdge
 
     attribute::MeshAttributeHandle<char> m_f_is_hole_handle; // 1 if Face is a hole
-
-    /**
-     * @brief Determine if the local connectivity for a vertex with a given id is valid
-     *
-     * @param vid: id of the vertex
-     * @return true iff the id specifies a valid vertex and the connectivity involving it is valid
-     */
-    bool is_vertex_connectivity_valid(long vid) const;
-
-    /**
-     * @brief Determine if the local connectivity for a edge with a given id is valid
-     *
-     * @param eid: id of the edge
-     * @return true iff the id specifies a valid edge and the connectivity involving it is valid
-     */
-    bool is_edge_connectivity_valid(long eid) const;
-
-    /**
-     * @brief Determine if the local connectivity for a face with a given id is valid
-     *
-     * @param fid: id of the face
-     * @return true iff the id specifies a valid face and the connectivity involving it is valid
-     */
-    bool is_face_connectivity_valid(long fid) const;
-
-    /**
-     * @brief Determine if the local connectivity for a halfedge with a given id is valid
-     *
-     * @param hid: id of the halfedge
-     * @return true iff the id specifies a valid halfedge and the connectivity involving it is valid
-     */
-    bool is_halfedge_connectivity_valid(long hid) const;
-
-    /**
-     * @brief Count the number of vertices in the mesh (including hole vertices)
-     *
-     * This method uses an O(#edges) explicit computation and should only be used for checking
-     * validity
-     *
-     * @return number of vertices in the mesh
-     */
-    long count_vertices_slow() const;
-
-    /**
-     * @brief Count the number of face in the mesh (including hole faces)
-     *
-     * This method uses an O(#edges) explicit computation and should only be used for checking
-     * validity
-     *
-     * @return number of faces in the mesh
-     */
-    long count_faces_slow() const;
 };
 
 } // namespace wmtk
