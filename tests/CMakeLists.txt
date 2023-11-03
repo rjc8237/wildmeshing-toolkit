@@ -9,13 +9,13 @@ include(wmtk_data)
 # Sources
 set(TEST_SOURCES
     test_topology.cpp
-    test_topology.cpp
     test_mesh.cpp
     test_autogen.cpp
     test_tuple.cpp
     test_tuple_1d.cpp
     test_tuple_2d.cpp
     test_tuple_3d.cpp
+    test_tuple_polygon.cpp
     test_io.cpp
     test_execution.cpp
     test_invariants.cpp
@@ -26,6 +26,7 @@ set(TEST_SOURCES
     test_2d_operation_construction.cpp
     test_accessor.cpp
     test_example_meshes.cpp
+    test_polygon_example_meshes.cpp
     test_3d_operations.cpp
     test_multi_mesh.cpp
     test_multi_mesh_visitor.cpp
@@ -43,8 +44,12 @@ set(TEST_SOURCES
     tools/DEBUG_EdgeMesh.cpp
     tools/DEBUG_TriMesh.hpp
     tools/DEBUG_TriMesh.cpp
+    tools/DEBUG_PolygonMesh.hpp
+    tools/DEBUG_PolygonMesh.cpp
     tools/EdgeMesh_examples.hpp
     tools/EdgeMesh_examples.cpp
+    tools/PolygonMesh_examples.hpp
+    tools/PolygonMesh_examples.cpp
     tools/TriMesh_examples.hpp
     tools/TriMesh_examples.cpp
     tools/redirect_logger_to_cout.hpp

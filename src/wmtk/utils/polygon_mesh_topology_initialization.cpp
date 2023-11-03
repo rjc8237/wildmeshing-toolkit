@@ -37,16 +37,6 @@ VectorXl remove_unreferenced_vertices(const std::vector<std::vector<long>>& F)
     }
 
     return old_to_new;
-
-    // Reindex face indices
-    // long n_f = F.size();
-    // std::vector<std::vector<long>> reindexed_F = F;
-    // for (long fi = 0; fi < n_f; ++fi) {
-    //     long face_size = F[i].size();
-    //     for (long vi = 0; vi < face_size; ++vi) {
-    //         reindexed_F[i][j] = old_to_new[F[i][j]];
-    //     }
-    // }
 }
 
 // Flatten a list of lists to a single vector
@@ -353,7 +343,7 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topolo
 }
 
 std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
-polygon_mesh_fv_topology_initialization(std::vector<std::vector<long>>& F)
+polygon_mesh_fv_topology_initialization(const std::vector<std::vector<long>>& F)
 {
     // Get the cumulative sum of the number of halfedges per face
     long n_f = F.size();
