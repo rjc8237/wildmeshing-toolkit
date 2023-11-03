@@ -34,6 +34,7 @@ PolygonMesh& PolygonMesh::operator=(PolygonMesh&& o) = default;
 
 Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
 {
+    assert(is_valid_slow(tuple));
     long new_local_vid = (tuple.m_local_vid + 1) % 2; // All switches swap local vid
 
     switch (type) {
@@ -51,19 +52,25 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
         // Switched edge is prev for local vertex index 0 and next for local index 1
         auto e_switch_handle = (tuple.m_local_vid == 0) ? m_prev_handle : m_next_handle;
         ConstAccessor<long> e_switch_accessor = create_const_accessor<long>(e_switch_handle);
-        long e_switch = e_switch_accessor.scalar_attribute(tuple);
-
-        return Tuple(new_local_vid, tuple.m_local_eid, tuple.m_local_fid, e_switch, tuple.m_hash);
-    }
-    case PrimitiveType::Face: {
-        long h = tuple.m_global_cid;
+        long h_new = e_switch_accessor.scalar_attribute(tuple);
 
         return Tuple(
             new_local_vid,
             tuple.m_local_eid,
             tuple.m_local_fid,
-            implicit_opp(h),
-            tuple.m_hash);
+            h_new,
+            get_cell_hash_slow(h_new));
+    }
+    case PrimitiveType::Face: {
+        long h = tuple.m_global_cid;
+        long h_new = implicit_opp(h);
+
+        return Tuple(
+            new_local_vid,
+            tuple.m_local_eid,
+            tuple.m_local_fid,
+            h_new,
+            get_cell_hash_slow(h_new));
     }
     case PrimitiveType::HalfEdge:
     case PrimitiveType::Tetrahedron:
@@ -73,25 +80,24 @@ Tuple PolygonMesh::switch_tuple(const Tuple& tuple, PrimitiveType type) const
 
 Tuple PolygonMesh::tuple_from_id(const PrimitiveType type, const long gid) const
 {
-    // TODO Need to get hashes
-
     switch (type) {
     case PrimitiveType::Vertex: {
         ConstAccessor<long> out_accessor = create_const_accessor<long>(m_out_handle);
         auto h = out_accessor.index_access().scalar_attribute(gid);
-        return Tuple(0, -1, -1, h, 0);
+        return Tuple(0, -1, -1, h, get_cell_hash_slow(h));
     }
     case PrimitiveType::Edge: {
         long h = 2 * gid;
-        return Tuple(0, -1, -1, h, 0);
+        return Tuple(0, -1, -1, h, get_cell_hash_slow(h));
     }
     case PrimitiveType::Face: {
         ConstAccessor<long> fh_accessor = create_const_accessor<long>(m_fh_handle);
         auto h = fh_accessor.index_access().scalar_attribute(gid);
-        return Tuple(0, -1, -1, h, 0);
+        return Tuple(0, -1, -1, h, get_cell_hash_slow(h));
     }
     case PrimitiveType::HalfEdge: {
-        return Tuple(0, -1, -1, gid, 0);
+        long h = gid;
+        return Tuple(0, -1, -1, h, get_cell_hash_slow(h));
     }
     case PrimitiveType::Tetrahedron:
     default: throw std::runtime_error("Invalid primitive type"); break;
@@ -107,14 +113,9 @@ bool PolygonMesh::is_connectivity_valid() const
 bool PolygonMesh::is_valid(const Tuple& tuple, ConstAccessor<long>& hash_accessor) const
 {
     if (tuple.is_null()) return false;
-    if (tuple.m_global_cid < 0) {
-        return false;
-    }
-
-    // Check if local vid is in {0, 1}
-    if ((tuple.m_local_vid != 0) && (tuple.m_local_vid != 1)) {
-        return false;
-    }
+    assert(tuple.m_global_cid >= 0);
+    assert(tuple.m_global_cid < capacity(PrimitiveType::HalfEdge));
+    assert((tuple.m_local_vid == 0) || (tuple.m_local_vid == 1));
 
     return Mesh::is_hash_valid(tuple, hash_accessor);
 }
