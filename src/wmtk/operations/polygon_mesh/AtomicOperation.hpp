@@ -34,12 +34,14 @@ protected:
 
 
 private:
-    Accessor<long> m_hn_accessor;
-    Accessor<long> m_hp_accessor;
+    Accessor<long> m_next_accessor;
+    Accessor<long> m_prev_accessor;
+
+    Accessor<long> m_to_accessor;
+    Accessor<long> m_out_accessor;
+
     Accessor<long> m_hf_accessor;
-    Accessor<long> m_hv_accessor;
     Accessor<long> m_fh_accessor;
-    Accessor<long> m_vh_accessor;
     Accessor<char> m_f_is_hole_accessor;
 
     Accessor<char> m_v_flag_accessor;

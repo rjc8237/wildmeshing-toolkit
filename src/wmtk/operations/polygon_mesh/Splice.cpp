@@ -33,6 +33,11 @@ bool Splice::execute()
     long old_hn_id = get_next(old_h_id);
     long old_gn_id = get_next(old_g_id);
 
+    // Do nothing for identical halfedges
+    if (old_hn_id == old_gn_id) {
+        return true;
+    }
+
     // Old face indices
     long old_hf_id = get_face(old_h_id);
     long old_gf_id = get_face(old_g_id);
@@ -44,7 +49,6 @@ bool Splice::execute()
     // Swap next(h) and next(g) (with corresponding change in prev)
     set_next(old_h_id, old_gn_id);
     set_next(old_g_id, old_hn_id);
-
 
     // If the halfedges share a face, then it is split
     if (old_hf_id == old_gf_id) {
@@ -59,8 +63,8 @@ bool Splice::execute()
         // If one of the faces is a hole, close it in the splice
         bool merged_face_is_hole = (is_hole(old_hf_id) && is_hole(old_gf_id));
         long new_f_id = new_face(merged_face_is_hole);
-        set_face(old_hf_id, new_f_id);
-        set_face(old_gf_id, new_f_id);
+        set_face(old_h_id, new_f_id);
+        set_face(old_g_id, new_f_id);
     }
     delete_face(old_hf_id);
     delete_face(old_gf_id);
@@ -93,7 +97,7 @@ long Splice::next_after_splice(long h)
     } else if (h == old_g_id) {
         return get_next(old_h_id);
     } else {
-        return get_next(old_h_id);
+        return get_next(h);
     }
 }
 

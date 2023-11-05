@@ -1,15 +1,12 @@
 # Include Catch2 stuff
-include(catch2)
-FetchContent_GetProperties(catch2)
-list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
-include(Catch)
-include(wmtk_data)
 
-lagrange_include_modules(io)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/recipes/tests")
+
+include(catch2)
+include(wmtk_data)
 
 # Sources
 set(TEST_SOURCES
-    test_topology.cpp
     test_topology.cpp
     test_mesh.cpp
     test_autogen.cpp
@@ -17,8 +14,10 @@ set(TEST_SOURCES
     test_tuple_1d.cpp
     test_tuple_2d.cpp
     test_tuple_3d.cpp
+    test_tuple_polygon.cpp
     test_io.cpp
     test_execution.cpp
+    test_invariants.cpp
     test_simplex_collection.cpp
     test_simplicial_complex.cpp
     test_1d_operations.cpp
@@ -26,13 +25,17 @@ set(TEST_SOURCES
     test_2d_operation_construction.cpp
     test_accessor.cpp
     test_example_meshes.cpp
+    test_polygon_example_meshes.cpp
+    test_polygon_operations.cpp
     test_3d_operations.cpp
     test_multi_mesh.cpp
     test_multi_mesh_visitor.cpp
     test_mesh_variant.cpp
     test_variant_metaprogramming.cpp
+    test_autodiff.cpp
     test_tuple_metaprogramming.cpp
     test_local_switch_search.cpp
+    test_primitive.cpp
 
     tools/all_valid_local_tuples.hpp
     tools/all_valid_local_tuples.cpp
@@ -41,8 +44,12 @@ set(TEST_SOURCES
     tools/DEBUG_EdgeMesh.cpp
     tools/DEBUG_TriMesh.hpp
     tools/DEBUG_TriMesh.cpp
+    tools/DEBUG_PolygonMesh.hpp
+    tools/DEBUG_PolygonMesh.cpp
     tools/EdgeMesh_examples.hpp
     tools/EdgeMesh_examples.cpp
+    tools/PolygonMesh_examples.hpp
+    tools/PolygonMesh_examples.cpp
     tools/TriMesh_examples.hpp
     tools/TriMesh_examples.cpp
     tools/redirect_logger_to_cout.hpp
@@ -62,17 +69,23 @@ add_executable(wmtk_tests ${TEST_SOURCES})
 
 # Dependencies
 include(finite-diff)
-target_link_libraries(wmtk_tests PUBLIC finitediff::finitediff)
 
 target_link_libraries(wmtk_tests PUBLIC
     wmtk::toolkit
     wmtk::data
     Catch2::Catch2WithMain
-    lagrange::io
+    finitediff::finitediff
 )
+
+FetchContent_GetProperties(catch2)
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+include(Catch)
 
 add_subdirectory(components)
 source_group("components" REGULAR_EXPRESSION "components\/.*\.(cpp|h|hpp)?$")
+
+add_subdirectory(function)
+source_group("function" REGULAR_EXPRESSION "function\/.*\.(cpp|h|hpp)?$")
 
 wmtk_copy_dll(wmtk_tests)
 

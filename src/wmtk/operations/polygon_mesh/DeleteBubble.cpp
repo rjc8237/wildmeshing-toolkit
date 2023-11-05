@@ -56,6 +56,8 @@ bool DeleteBubble::precondition()
     if (get_face(hji_id) != f_id) {
         return false;
     }
+
+    return true;
 }
 
 } // namespace wmtk::operations::polygon_mesh

@@ -12,12 +12,12 @@ long implicit_opp(long h)
 
 AtomicOperation::AtomicOperation(PolygonMesh& m)
     : PolygonMeshOperation(m)
-    , m_hn_accessor(m.create_accessor<long>(m.m_hn_handle))
-    , m_hp_accessor(m.create_accessor<long>(m.m_hp_handle))
+    , m_next_accessor(m.create_accessor<long>(m.m_next_handle))
+    , m_prev_accessor(m.create_accessor<long>(m.m_prev_handle))
+    , m_to_accessor(m.create_accessor<long>(m.m_to_handle))
+    , m_out_accessor(m.create_accessor<long>(m.m_out_handle))
     , m_hf_accessor(m.create_accessor<long>(m.m_hf_handle))
-    , m_hv_accessor(m.create_accessor<long>(m.m_hv_handle))
     , m_fh_accessor(m.create_accessor<long>(m.m_fh_handle))
-    , m_vh_accessor(m.create_accessor<long>(m.m_vh_handle))
     , m_f_is_hole_accessor(m.create_accessor<char>(m.m_f_is_hole_handle))
     , m_v_flag_accessor(m.get_flag_accessor(PrimitiveType::Vertex))
     , m_e_flag_accessor(m.get_flag_accessor(PrimitiveType::Edge))
@@ -33,15 +33,25 @@ long AtomicOperation::new_face(bool is_hole)
 {
     mesh().reserve_attributes(PrimitiveType::Face, mesh().capacity(PrimitiveType::Face) + 1);
     long fid = mesh().request_simplex_indices(PrimitiveType::Face, 1)[0];
-    m_f_is_hole_accessor.index_access().scalar_attribute(fid) = is_hole ? 1 : 0;
+    mesh().get_index_access(m_f_is_hole_accessor).scalar_attribute(fid) = is_hole ? 1 : 0;
     return fid;
 }
 
 long AtomicOperation::new_edge()
 {
+    // Get new edge id
     mesh().reserve_attributes(PrimitiveType::Edge, mesh().capacity(PrimitiveType::Edge) + 1);
-    mesh().reserve_attributes(PrimitiveType::HalfEdge, mesh().capacity(PrimitiveType::Edge) + 2);
-    return mesh().request_simplex_indices(PrimitiveType::Edge, 1)[0];
+    long eid = mesh().request_simplex_indices(PrimitiveType::Edge, 1)[0];
+
+    // Also make attributes for corresponding halfedge ids
+    size_t primitive_id = get_primitive_type_id(PrimitiveType::HalfEdge);
+    long new_halfedge_capacity = mesh().capacity(PrimitiveType::HalfEdge) + 2;
+    mesh().reserve_attributes(PrimitiveType::HalfEdge, new_halfedge_capacity);
+    mesh().m_attribute_manager.m_capacities[primitive_id] = new_halfedge_capacity;
+    mesh().get_index_access(m_h_flag_accessor).scalar_attribute(2 * eid) |= 0x1;
+    mesh().get_index_access(m_h_flag_accessor).scalar_attribute(2 * eid + 1) |= 0x1;
+
+    return eid;
 }
 
 long AtomicOperation::new_vertex()
@@ -52,60 +62,61 @@ long AtomicOperation::new_vertex()
 
 void AtomicOperation::delete_face(long face_id)
 {
-    m_f_flag_accessor.index_access().scalar_attribute(face_id) = 0;
+    mesh().get_index_access(m_f_flag_accessor).scalar_attribute(face_id) = 0;
 }
 
 void AtomicOperation::delete_edge(long edge_id)
 {
-    m_e_flag_accessor.index_access().scalar_attribute(edge_id) = 0;
-    m_h_flag_accessor.index_access().scalar_attribute(2 * edge_id) = 0;
-    m_h_flag_accessor.index_access().scalar_attribute(2 * edge_id + 1) = 0;
+    mesh().get_index_access(m_e_flag_accessor).scalar_attribute(edge_id) = 0;
+    mesh().get_index_access(m_h_flag_accessor).scalar_attribute(2 * edge_id) = 0;
+    mesh().get_index_access(m_h_flag_accessor).scalar_attribute(2 * edge_id + 1) = 0;
 }
 
 void AtomicOperation::delete_vertex(long vertex_id)
 {
-    m_v_flag_accessor.index_access().scalar_attribute(vertex_id) = 0;
+    mesh().get_index_access(m_v_flag_accessor).scalar_attribute(vertex_id) = 0;
 }
 
 void AtomicOperation::set_face(long halfedge_id, long face_id)
 {
     long h_iter_id = halfedge_id;
     do {
-        m_hf_accessor.index_access().scalar_attribute(h_iter_id) = face_id;
-        h_iter_id = m_hn_accessor.index_access().scalar_attribute(h_iter_id);
+        mesh().get_index_access(m_hf_accessor).scalar_attribute(h_iter_id) = face_id;
+        h_iter_id = mesh().get_index_access(m_next_accessor).scalar_attribute(h_iter_id);
     } while (h_iter_id != halfedge_id);
-    m_fh_accessor.index_access().scalar_attribute(face_id) = halfedge_id;
+    mesh().get_index_access(m_fh_accessor).scalar_attribute(face_id) = halfedge_id;
 }
 
 void AtomicOperation::set_next(long halfedge_id, long next_halfedge_id)
 {
-    m_hn_accessor.index_access().scalar_attribute(halfedge_id) = next_halfedge_id;
-    m_hp_accessor.index_access().scalar_attribute(next_halfedge_id) = halfedge_id;
+    mesh().get_index_access(m_next_accessor).scalar_attribute(halfedge_id) = next_halfedge_id;
+    mesh().get_index_access(m_prev_accessor).scalar_attribute(next_halfedge_id) = halfedge_id;
 }
 
 void AtomicOperation::set_vertex(long halfedge_id, long vertex_id)
 {
     long h_iter_id = halfedge_id;
     do {
-        m_hv_accessor.index_access().scalar_attribute(h_iter_id) = vertex_id;
-        h_iter_id = m_hp_accessor.index_access().scalar_attribute(implicit_opp(h_iter_id));
+        mesh().get_index_access(m_to_accessor).scalar_attribute(h_iter_id) = vertex_id;
+        h_iter_id =
+            mesh().get_index_access(m_prev_accessor).scalar_attribute(implicit_opp(h_iter_id));
     } while (h_iter_id != halfedge_id);
-    m_vh_accessor.index_access().scalar_attribute(vertex_id) = halfedge_id;
+    mesh().get_index_access(m_out_accessor).scalar_attribute(vertex_id) = implicit_opp(halfedge_id);
 }
 
 long AtomicOperation::get_face(long halfedge_id)
 {
-    return m_hf_accessor.index_access().scalar_attribute(halfedge_id);
+    return mesh().get_index_access(m_hf_accessor).scalar_attribute(halfedge_id);
 }
 
 long AtomicOperation::get_next(long halfedge_id)
 {
-    return m_hn_accessor.index_access().scalar_attribute(halfedge_id);
+    return mesh().get_index_access(m_next_accessor).scalar_attribute(halfedge_id);
 }
 
 long AtomicOperation::get_vertex(long halfedge_id)
 {
-    return m_hv_accessor.index_access().scalar_attribute(halfedge_id);
+    return mesh().get_index_access(m_to_accessor).scalar_attribute(halfedge_id);
 }
 
 long AtomicOperation::get_halfedge_from_tuple(const Tuple& t)

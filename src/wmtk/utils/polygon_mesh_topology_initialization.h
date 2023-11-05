@@ -44,7 +44,7 @@ std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl> polygon_mesh_topolo
  * @return hole_faces: collection of boundary face halfedge ids.
  */
 std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
-polygon_mesh_fv_topology_initialization(std::vector<std::vector<long>>& F);
+polygon_mesh_fv_topology_initialization(const std::vector<std::vector<long>>& F);
 
 std::tuple<VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, VectorXl, std::vector<long>>
 polygon_mesh_fv_topology_initialization(Eigen::Ref<const RowVectors3l> F);
