@@ -145,7 +145,7 @@ bool PolygonMesh::is_boundary_vertex(const Tuple& tuple) const
 
 bool PolygonMesh::is_boundary_edge(const Tuple& tuple) const
 {
-    return (is_hole_face(tuple)) || (is_hole_face(opp_halfedge(tuple)));
+    return (is_hole_face(tuple)) != (is_hole_face(opp_halfedge(tuple)));
 }
 
 Tuple PolygonMesh::next_halfedge(const Tuple& h_tuple) const

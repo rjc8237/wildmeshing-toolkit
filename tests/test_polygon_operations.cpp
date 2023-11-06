@@ -1,7 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <wmtk/operations/polygon_mesh/DeleteBubble.hpp>
+#include <wmtk/operations/polygon_mesh/FillHole.hpp>
 #include <wmtk/operations/polygon_mesh/MakeEdge.hpp>
+#include <wmtk/operations/polygon_mesh/MakeHole.hpp>
 #include <wmtk/operations/polygon_mesh/Splice.hpp>
 #include "tools/DEBUG_PolygonMesh.hpp"
 #include "tools/PolygonMesh_examples.hpp"
@@ -270,4 +272,174 @@ TEST_CASE("polygon_compound_atomic_operations", "[operations][polygon]")
     CHECK(m.get_all(PrimitiveType::HalfEdge).size() == 2);
 }
 
-// TODO Check hole face cases and preconditions
+TEST_CASE("make_hole_operations", "[operations][make_hole][polygon]")
+{
+    using namespace operations;
+    DEBUG_PolygonMesh m = grid();
+    bool success;
+
+    // Make a valid hole face
+    Tuple f0 = m.tuple_from_id(PF, 0);
+    OperationSettings<polygon_mesh::MakeHole> op1_settings;
+    polygon_mesh::MakeHole op1(m, f0, op1_settings);
+    CHECK(op1.precondition());
+    success = op1();
+
+    CHECK(success);
+    REQUIRE(m.is_connectivity_valid());
+    CHECK(m.count_simply_connected_components() == 1);
+    CHECK(m.genus() == 0);
+    CHECK(m.count_boundary_loops() == 1);
+    CHECK(m.count_hole_faces() == 2);
+    CHECK(m.count_interior_faces() == 3);
+
+    // Make a invalid hole face
+    Tuple f3 = m.tuple_from_id(PF, 3);
+    OperationSettings<polygon_mesh::MakeHole> op2_settings;
+    polygon_mesh::MakeHole op2(m, f3, op2_settings);
+    CHECK(!op2.precondition());
+}
+
+TEST_CASE("fill_hole_operations", "[operations][fill_hole][polygon]")
+{
+    using namespace operations;
+    DEBUG_PolygonMesh m = grid();
+    bool success;
+
+    // Make all faces holes
+    for (long i = 0; i < 4; ++i) {
+        Tuple fi = m.tuple_from_id(PF, i);
+        OperationSettings<polygon_mesh::MakeHole> op_settings;
+        polygon_mesh::MakeHole op(m, fi, op_settings);
+        CHECK(op.precondition());
+        success = op();
+        CHECK(success);
+        REQUIRE(m.is_connectivity_valid());
+        CHECK(m.count_hole_faces() == 2 + i);
+        CHECK(m.count_interior_faces() == 3 - i);
+    }
+
+    // Fill a valid hole
+    Tuple f0 = m.tuple_from_id(PF, 0);
+    OperationSettings<polygon_mesh::FillHole> make_hole_op_settings;
+    polygon_mesh::FillHole op1(m, f0, make_hole_op_settings);
+    CHECK(op1.precondition());
+    success = op1();
+
+    CHECK(success);
+    REQUIRE(m.is_connectivity_valid());
+    CHECK(m.count_simply_connected_components() == 1);
+    CHECK(m.genus() == 0);
+    CHECK(m.count_boundary_loops() == 1);
+    CHECK(m.count_hole_faces() == 4);
+    CHECK(m.count_interior_faces() == 1);
+
+    // Fill a invalid hole face
+    Tuple f3 = m.tuple_from_id(PF, 3);
+    OperationSettings<polygon_mesh::FillHole> op2_settings;
+    polygon_mesh::FillHole op2(m, f3, op2_settings);
+    CHECK(!op2.precondition());
+}
+
+
+TEST_CASE("open_splice_edge_operation", "[operations][splice][polygon]")
+{
+    using namespace operations;
+
+    DEBUG_PolygonMesh m;
+    OperationSettings<polygon_mesh::Splice> op_settings;
+    bool success;
+
+    SECTION("no change")
+    {
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 0);
+        polygon_mesh::MakeHole(m, g, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::Splice op(m, h, g, op_settings);
+        assert(op.precondition());
+        success = op();
+
+        CHECK(success);
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 1);
+    }
+    SECTION("merge single first hole face")
+    {
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 1);
+        polygon_mesh::MakeHole(m, h, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::Splice op(m, h, g, op_settings);
+        assert(op.precondition());
+        success = op();
+
+        CHECK(success);
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+    }
+    SECTION("merge single second hole face")
+    {
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 1);
+        polygon_mesh::MakeHole(m, g, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::Splice op(m, h, g, op_settings);
+        assert(op.precondition());
+        success = op();
+
+        CHECK(success);
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+    }
+    SECTION("merge double hole face")
+    {
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 1);
+        polygon_mesh::MakeHole(m, h, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::MakeHole(m, g, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::Splice op(m, h, g, op_settings);
+        assert(op.precondition());
+        success = op();
+
+        CHECK(success);
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 1);
+    }
+    SECTION("split hole face")
+    {
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 2);
+        Tuple f0 = m.tuple_from_id(PF, 0);
+        Tuple f1 = m.tuple_from_id(PF, 1);
+        polygon_mesh::MakeHole(m, f0, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::MakeHole(m, f1, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::Splice op(m, h, g, op_settings);
+        assert(op.precondition());
+        success = op();
+
+        CHECK(success);
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 3);
+        CHECK(m.count_hole_faces() == 3);
+    }
+    SECTION("invalid split")
+    {
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 2);
+        polygon_mesh::MakeHole(m, h, OperationSettings<polygon_mesh::MakeHole>())();
+        polygon_mesh::Splice op(m, h, g, op_settings);
+        assert(!op.precondition());
+    }
+
+    CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
+    CHECK(m.get_all(PrimitiveType::HalfEdge).size() == 4);
+    REQUIRE(m.is_connectivity_valid());
+}

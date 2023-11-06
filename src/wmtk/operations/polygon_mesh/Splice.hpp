@@ -58,7 +58,6 @@ private:
     Tuple m_first_tuple;
     Tuple m_second_tuple;
 
-    bool is_hole(long face_id) const;
     long next_after_splice(long h);
 };
 

@@ -148,6 +148,42 @@ long DEBUG_PolygonMesh::count_boundary_loops() const
     return boundary_loop_id;
 }
 
+bool DEBUG_PolygonMesh::is_hole_vertex(const Tuple& v) const
+{
+    Tuple v_iter = v;
+    do {
+        if (!is_hole_face(v_iter)) {
+            return false;
+        }
+        v_iter = switch_tuple(switch_tuple(v_iter, PrimitiveType::Face), PrimitiveType::Edge);
+    } while (v_iter != v);
+
+    return true;
+}
+
+bool DEBUG_PolygonMesh::is_hole_edge(const Tuple& e) const
+{
+    return (is_hole_face(e) && is_hole_face(opp_halfedge(e)));
+}
+
+bool DEBUG_PolygonMesh::is_hole(const Tuple& tuple, PrimitiveType type) const
+{
+    switch (type) {
+    case PrimitiveType::Vertex: {
+        return is_hole_vertex(tuple);
+    }
+    case PrimitiveType::Edge: {
+        return is_hole_edge(tuple);
+    }
+    case PrimitiveType::Face: {
+        return is_hole_face(tuple);
+    }
+    case PrimitiveType::HalfEdge:
+    case PrimitiveType::Tetrahedron:
+    default: throw std::runtime_error("Invalid primitive type"); break;
+    }
+}
+
 long DEBUG_PolygonMesh::count_hole_faces() const
 {
     auto faces = get_all(PrimitiveType::Face);
@@ -161,12 +197,35 @@ long DEBUG_PolygonMesh::count_hole_faces() const
     return num_hole_faces;
 }
 
+long DEBUG_PolygonMesh::count_interior_faces() const
+{
+    return get_all(PrimitiveType::Face).size() - count_hole_faces();
+}
+
+long DEBUG_PolygonMesh::count_hole_primitives(PrimitiveType type) const
+{
+    auto primitives = get_all(type);
+    long num_hole_primitives = 0;
+    for (const auto& primitive : primitives) {
+        if (is_hole(primitive, type)) {
+            ++num_hole_primitives;
+        }
+    }
+
+    return num_hole_primitives;
+}
+
+
 long DEBUG_PolygonMesh::euler_characteristic() const
 {
     auto counts = primitive_counts();
-    long num_boundary_loops = count_boundary_loops();
-    long num_hole_faces = count_hole_faces();
-    return counts[0] - counts[1] + counts[2] + num_boundary_loops - num_hole_faces;
+    long num_hole_vertices = count_hole_primitives(PrimitiveType::Vertex);
+    long num_hole_edges = count_hole_primitives(PrimitiveType::Edge);
+    long num_hole_faces = count_hole_primitives(PrimitiveType::Face);
+    long num_vertices = counts[0] - num_hole_vertices;
+    long num_edges = counts[1] - num_hole_edges;
+    long num_faces = counts[2] - num_hole_faces;
+    return num_vertices - num_edges + num_faces;
 }
 
 long DEBUG_PolygonMesh::genus() const
@@ -175,7 +234,7 @@ long DEBUG_PolygonMesh::genus() const
         wmtk::logger().error("not a connected surface\n");
         throw std::runtime_error("GenusComputeError");
     }
-    return (2 - euler_characteristic()) / 2;
+    return (2 - euler_characteristic() - count_boundary_loops()) / 2;
 }
 
 bool DEBUG_PolygonMesh::is_connectivity_valid() const

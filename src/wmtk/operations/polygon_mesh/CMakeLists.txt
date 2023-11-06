@@ -3,8 +3,12 @@ set(SRC_FILES
 	AtomicOperation.cpp
 	DeleteBubble.cpp
 	DeleteBubble.hpp
+	FillHole.cpp
+	FillHole.hpp
 	MakeEdge.cpp
 	MakeEdge.hpp
+	MakeHole.cpp
+	MakeHole.hpp
 	PolygonMeshOperation.cpp
 	PolygonMeshOperation.hpp
 	Splice.cpp

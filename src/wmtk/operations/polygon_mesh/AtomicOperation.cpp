@@ -104,6 +104,22 @@ void AtomicOperation::set_vertex(long halfedge_id, long vertex_id)
     mesh().get_index_access(m_out_accessor).scalar_attribute(vertex_id) = implicit_opp(halfedge_id);
 }
 
+
+bool AtomicOperation::is_hole(long face_id) const
+{
+    return mesh().is_hole_face(mesh().tuple_from_id(PrimitiveType::Face, face_id));
+}
+
+void AtomicOperation::make_hole(long face_id)
+{
+    mesh().get_index_access(m_f_is_hole_accessor).scalar_attribute(face_id) |= 0x1;
+}
+
+void AtomicOperation::fill_hole(long face_id)
+{
+    mesh().get_index_access(m_f_is_hole_accessor).scalar_attribute(face_id) = 0;
+}
+
 long AtomicOperation::get_face(long halfedge_id)
 {
     return mesh().get_index_access(m_hf_accessor).scalar_attribute(halfedge_id);
