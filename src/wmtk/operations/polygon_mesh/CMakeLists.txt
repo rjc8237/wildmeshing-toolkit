@@ -5,6 +5,10 @@ set(SRC_FILES
 	DeleteBubble.hpp
 	FillHole.cpp
 	FillHole.hpp
+	JoinFace.cpp
+	JoinFace.hpp
+	JoinVertex.cpp
+	JoinVertex.hpp
 	MakeEdge.cpp
 	MakeEdge.hpp
 	MakeHole.cpp
@@ -13,5 +17,9 @@ set(SRC_FILES
 	PolygonMeshOperation.hpp
 	Splice.cpp
 	Splice.hpp
+	SplitFace.cpp
+	SplitFace.hpp
+	SplitVertex.cpp
+	SplitVertex.hpp
 )
 target_sources(wildmeshing_toolkit PRIVATE ${SRC_FILES})
