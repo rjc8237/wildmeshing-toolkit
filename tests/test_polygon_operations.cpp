@@ -2,9 +2,13 @@
 
 #include <wmtk/operations/polygon_mesh/DeleteBubble.hpp>
 #include <wmtk/operations/polygon_mesh/FillHole.hpp>
+#include <wmtk/operations/polygon_mesh/JoinFace.hpp>
+#include <wmtk/operations/polygon_mesh/JoinVertex.hpp>
 #include <wmtk/operations/polygon_mesh/MakeEdge.hpp>
 #include <wmtk/operations/polygon_mesh/MakeHole.hpp>
 #include <wmtk/operations/polygon_mesh/Splice.hpp>
+#include <wmtk/operations/polygon_mesh/SplitFace.hpp>
+#include <wmtk/operations/polygon_mesh/SplitVertex.hpp>
 #include "tools/DEBUG_PolygonMesh.hpp"
 #include "tools/PolygonMesh_examples.hpp"
 
@@ -441,5 +445,141 @@ TEST_CASE("open_splice_edge_operation", "[operations][splice][polygon]")
 
     CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
     CHECK(m.get_all(PrimitiveType::HalfEdge).size() == 4);
+    REQUIRE(m.is_connectivity_valid());
+}
+
+bool split_face_postcondition(
+    const DEBUG_PolygonMesh& initial_m,
+    const DEBUG_PolygonMesh& m,
+    const Tuple& e_tuple,
+    const Tuple& h_tuple,
+    const Tuple& g_tuple)
+{
+    auto initial_next = initial_m.create_base_accessor<long>(initial_m.next_handle());
+    auto next = m.create_base_accessor<long>(m.next_handle());
+
+    // Get halfedge ids from tuples
+    long h = initial_m.id(h_tuple, PrimitiveType::HalfEdge);
+    long g = initial_m.id(g_tuple, PrimitiveType::HalfEdge);
+    long e0 = m.id(e_tuple, PrimitiveType::HalfEdge);
+    long e1 = m.id(m.opp_halfedge(e_tuple), PrimitiveType::HalfEdge);
+
+    // Check local next topology of the new edge
+    if ((next.scalar_attribute(h) != e0) ||
+        (next.scalar_attribute(e0) != initial_next.scalar_attribute(g)) ||
+        (next.scalar_attribute(g) != e1) ||
+        (next.scalar_attribute(e1) != initial_next.scalar_attribute(h))) {
+        return false;
+    }
+
+    // Check remainder of face between e0 and h
+    long h_iter = next.scalar_attribute(e0);
+    while (h_iter != h) {
+        if (next.scalar_attribute(h_iter) != initial_next.scalar_attribute(h_iter)) {
+            return false;
+        }
+        h_iter = next.scalar_attribute(h_iter);
+    }
+
+    // Check remainder of face between e1 and g
+    long g_iter = next.scalar_attribute(e1);
+    while (g_iter != g) {
+        if (next.scalar_attribute(g_iter) != initial_next.scalar_attribute(g_iter)) {
+            return false;
+        }
+        g_iter = next.scalar_attribute(g_iter);
+    }
+
+    // Check the split faces are holes iff the original face is a hole
+    bool is_hole = initial_m.is_hole_face(h_tuple);
+    if ((m.is_hole_face(e_tuple) != is_hole) ||
+        (m.is_hole_face(m.opp_halfedge(e_tuple)) != is_hole)) {
+        return false;
+    }
+
+    return true;
+}
+
+TEST_CASE("split_face_operation", "[operations][split_face][polygon]")
+{
+    using namespace operations;
+
+    DEBUG_PolygonMesh initial_m, m;
+    OperationSettings<polygon_mesh::SplitFace> op_settings;
+    bool success;
+
+    SECTION("split digon")
+    {
+        initial_m = digon();
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 2);
+        polygon_mesh::SplitFace op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_face_postcondition(initial_m, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 3);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 3);
+    }
+    SECTION("split triangle")
+    {
+        initial_m = triangle();
+        m = triangle();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 2);
+        polygon_mesh::SplitFace op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_face_postcondition(initial_m, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 4);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 3);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 3);
+    }
+    SECTION("split face with common vertex")
+    {
+        initial_m = torus();
+        m = torus();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 1);
+        polygon_mesh::SplitFace op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_face_postcondition(initial_m, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 2);
+    }
+    SECTION("hole face")
+    {
+        initial_m = triangle();
+        polygon_mesh::MakeHole(initial_m, initial_m.tuple_from_id(PH, 0), {})();
+        m = triangle();
+        polygon_mesh::MakeHole(m, m.tuple_from_id(PH, 0), {})();
+
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 4);
+        polygon_mesh::SplitFace op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_face_postcondition(initial_m, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 4);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 3);
+        CHECK(m.count_hole_faces() == 2);
+        CHECK(m.count_interior_faces() == 1);
+    }
+
+    CHECK(success);
     REQUIRE(m.is_connectivity_valid());
 }

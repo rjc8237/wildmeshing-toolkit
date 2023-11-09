@@ -1,6 +1,7 @@
 #include "SplitFace.hpp"
 #include <wmtk/Simplex.hpp>
 #include "MakeEdge.hpp"
+#include "MakeHole.hpp"
 #include "Splice.hpp"
 
 namespace wmtk::operations::polygon_mesh {
@@ -34,6 +35,14 @@ bool SplitFace::execute()
     Tuple h0 = make_edge.return_tuple();
     Tuple h1 = mesh().opp_halfedge(h0);
 
+    // Make the new bubble face a hole if the face to split is a hole
+    if (mesh().is_hole_face(m_first_tuple)) {
+        OperationSettings<MakeHole> make_hole_settings;
+        if (!MakeHole(mesh(), h0, make_hole_settings)()) {
+            return false;
+        }
+    }
+
     // The split is done by simply splicing the new edge into the face
     OperationSettings<Splice> splice_settings;
     if (!Splice(mesh(), m_second_tuple, h0, splice_settings)()) {
@@ -43,7 +52,15 @@ bool SplitFace::execute()
         return false;
     }
 
+    // Set output tuple to h0
+    m_output_tuple = h0;
+
     return true;
+}
+
+Tuple SplitFace::return_tuple() const
+{
+    return m_output_tuple;
 }
 
 bool SplitFace::precondition()
