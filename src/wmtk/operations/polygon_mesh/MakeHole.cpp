@@ -30,7 +30,7 @@ bool MakeHole::execute()
     return true;
 }
 
-bool MakeHole::precondition()
+bool MakeHole::precondition() const
 {
     long halfedge_id = get_halfedge_from_tuple(m_tuple);
 
@@ -51,7 +51,7 @@ bool MakeHole::precondition()
     return true;
 }
 
-bool MakeHole::precondition_at_vertex(long halfedge_id)
+bool MakeHole::precondition_at_vertex(long halfedge_id) const
 {
     // Check boundary validity
     long h_iter = halfedge_id;

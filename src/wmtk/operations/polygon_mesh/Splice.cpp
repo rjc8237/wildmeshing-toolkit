@@ -1,5 +1,5 @@
 #include "Splice.hpp"
-
+#include <algorithm>
 
 namespace {
 // Implicit opposite map for halfedges paired as [e] = {2*e, 2*e + 1}
@@ -28,67 +28,69 @@ bool Splice::execute()
     assert(precondition());
 
     // Old halfedge indices
-    long old_h_id = get_halfedge_from_tuple(m_first_tuple);
-    long old_g_id = get_halfedge_from_tuple(m_second_tuple);
-    long old_hn_id = get_next(old_h_id);
-    long old_gn_id = get_next(old_g_id);
+    std::array<long, 2> old_h_ids = {
+        get_halfedge_from_tuple(m_first_tuple),
+        get_halfedge_from_tuple(m_second_tuple)};
+    std::array<long, 2> old_hn_ids = {get_next(old_h_ids[0]), get_next(old_h_ids[1])};
 
     // Do nothing for identical halfedges
-    if (old_hn_id == old_gn_id) {
+    if (old_hn_ids[0] == old_hn_ids[1]) {
         return true;
     }
 
-    // Old face indices
-    long old_hf_id = get_face(old_h_id);
-    long old_gf_id = get_face(old_g_id);
+    // Old face and vertex indices
+    std::array<long, 2> old_hf_ids = {get_face(old_h_ids[0]), get_face(old_h_ids[1])};
+    std::array<long, 2> old_hv_ids = {get_vertex(old_h_ids[0]), get_vertex(old_h_ids[1])};
 
-    // Old vertex indices
-    long old_hv_id = get_vertex(old_h_id);
-    long old_gv_id = get_vertex(old_g_id);
+    // Swap next(h0) and next(h1) (with corresponding change in prev)
+    set_next(old_h_ids[0], old_hn_ids[1]);
+    set_next(old_h_ids[1], old_hn_ids[0]);
 
-    // Swap next(h) and next(g) (with corresponding change in prev)
-    set_next(old_h_id, old_gn_id);
-    set_next(old_g_id, old_hn_id);
+    // The new face is a hole iff both input faces are holes
+    bool new_face_is_hole = (is_hole(old_hf_ids[0]) && is_hole(old_hf_ids[1]));
 
-    // If the halfedges share a face, then it is split
-    if (old_hf_id == old_gf_id) {
-        bool split_face_is_hole = (is_hole(old_hf_id) && is_hole(old_gf_id));
-        long new_hf_id = new_face(split_face_is_hole);
-        long new_gf_id = new_face(split_face_is_hole);
-        set_face(old_h_id, new_hf_id);
-        set_face(old_g_id, new_gf_id);
+    // If the halfedges share a face, then it is split into two distinct faces
+    if (old_hf_ids[0] == old_hf_ids[1]) {
+        for (const auto& old_h_id : old_h_ids) {
+            long new_f_id = new_face(new_face_is_hole);
+            set_face(old_h_id, new_f_id);
+        }
     }
-    // If the halfedges have distinct faces, then they are merged
+    // If the halfedges have distinct faces, then they are merged into a single face
     else {
-        // If one of the faces is a hole, close it in the splice
-        bool merged_face_is_hole = (is_hole(old_hf_id) && is_hole(old_gf_id));
-        long new_f_id = new_face(merged_face_is_hole);
-        set_face(old_h_id, new_f_id);
-        set_face(old_g_id, new_f_id);
+        long new_f_id = new_face(new_face_is_hole);
+        for (const auto& old_h_id : old_h_ids) {
+            set_face(old_h_id, new_f_id);
+        }
     }
-    delete_face(old_hf_id);
-    delete_face(old_gf_id);
+    // Delete old face ids
+    for (const auto& old_hf_id : old_hf_ids) {
+        delete_face(old_hf_id);
+    }
 
-    // If the halfedges share a vertex, then it is split
-    if (old_hv_id == old_gv_id) {
-        long new_hv_id = new_vertex();
-        long new_gv_id = new_vertex();
-        set_vertex(old_h_id, new_hv_id);
-        set_vertex(old_g_id, new_gv_id);
+    // If the halfedges share a tip vertex, then it is split into two distinct vertices
+    if (old_hv_ids[0] == old_hv_ids[1]) {
+        for (const auto& old_h_id : old_h_ids) {
+            long new_v_id = new_vertex();
+            set_vertex(old_h_id, new_v_id);
+        }
     }
-    // If the halfedges have distinct vertices, then they are merged
+    // If the halfedges have distinct tips, then they are merged into a single vertex
     else {
         long new_v_id = new_vertex();
-        set_vertex(old_h_id, new_v_id);
-        set_vertex(old_g_id, new_v_id);
+        for (const auto& old_h_id : old_h_ids) {
+            set_vertex(old_h_id, new_v_id);
+        }
     }
-    delete_vertex(old_hv_id);
-    delete_vertex(old_gv_id);
+    // Delete old vertex ids
+    for (const auto& old_hv_id : old_hv_ids) {
+        delete_vertex(old_hv_id);
+    }
 
     return true;
 }
 
-long Splice::next_after_splice(long h)
+long Splice::next_after_splice(long h) const
 {
     long old_h_id = get_halfedge_from_tuple(m_first_tuple);
     long old_g_id = get_halfedge_from_tuple(m_second_tuple);
@@ -101,7 +103,7 @@ long Splice::next_after_splice(long h)
     }
 }
 
-bool Splice::precondition()
+bool Splice::precondition() const
 {
     long old_h_id = get_halfedge_from_tuple(m_first_tuple);
     long old_g_id = get_halfedge_from_tuple(m_second_tuple);
@@ -135,7 +137,7 @@ bool Splice::precondition()
     return (num_boundary_edges <= 2);
 }
 
-bool Splice::is_topology_preserving()
+bool Splice::is_topology_preserving() const
 {
     // halfedge indices
     long h_id = get_halfedge_from_tuple(m_first_tuple);

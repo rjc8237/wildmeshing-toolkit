@@ -28,8 +28,6 @@ public:
 
     std::string name() const override;
 
-    using PolygonMeshOperation::hash_accessor;
-
     /**
      * @brief Check the precondition that the mesh remains manifold after the splice.
      *
@@ -39,7 +37,7 @@ public:
      * @return true if the mesh remains manifold
      * @return false otherwise
      */
-    bool precondition();
+    bool precondition() const;
 
     /**
      * @brief Determine if the splice preserves the topology of the original mesh
@@ -47,18 +45,23 @@ public:
      * @return true if the splice will preserve the topology
      * @return false otherwise
      */
-    bool is_topology_preserving();
+    bool is_topology_preserving() const;
 
 protected:
     bool execute() override;
 
 private:
-    const OperationSettings<Splice>& m_settings;
-
     Tuple m_first_tuple;
     Tuple m_second_tuple;
+    const OperationSettings<Splice>& m_settings;
 
-    long next_after_splice(long h);
+    /**
+     * @brief Helper function for determining the next halfedge after the splice is complete.
+     *
+     * @param h: halfedge index
+     * @return next halfedge of h after the splice is complete
+     */
+    long next_after_splice(long h) const;
 };
 
 } // namespace polygon_mesh

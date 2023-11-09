@@ -120,22 +120,22 @@ void AtomicOperation::fill_hole(long face_id)
     mesh().get_index_access(m_f_is_hole_accessor).scalar_attribute(face_id) = 0;
 }
 
-long AtomicOperation::get_face(long halfedge_id)
+long AtomicOperation::get_face(long halfedge_id) const
 {
     return mesh().get_index_access(m_hf_accessor).scalar_attribute(halfedge_id);
 }
 
-long AtomicOperation::get_next(long halfedge_id)
+long AtomicOperation::get_next(long halfedge_id) const
 {
     return mesh().get_index_access(m_next_accessor).scalar_attribute(halfedge_id);
 }
 
-long AtomicOperation::get_vertex(long halfedge_id)
+long AtomicOperation::get_vertex(long halfedge_id) const
 {
     return mesh().get_index_access(m_to_accessor).scalar_attribute(halfedge_id);
 }
 
-long AtomicOperation::get_halfedge_from_tuple(const Tuple& t)
+long AtomicOperation::get_halfedge_from_tuple(const Tuple& t) const
 {
     return mesh().id(t, PrimitiveType::HalfEdge);
 }
