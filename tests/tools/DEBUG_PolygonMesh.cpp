@@ -254,7 +254,7 @@ std::vector<long> DEBUG_PolygonMesh::get_vertex_id_loop(long hid) const
     std::vector<long> vertex(0);
     do {
         vertex.push_back(id(iter_tuple, PrimitiveType::HalfEdge));
-        iter_tuple = switch_face(switch_edge(iter_tuple));
+        iter_tuple = switch_edge(switch_face(iter_tuple));
     } while (id(iter_tuple, PrimitiveType::HalfEdge) != hid);
     return vertex;
 }
@@ -277,7 +277,7 @@ std::vector<long> DEBUG_PolygonMesh::get_vertex_id_loop_range(long hid, long gid
     std::vector<long> vertex(0);
     do {
         vertex.push_back(id(iter_tuple, PrimitiveType::HalfEdge));
-        iter_tuple = switch_face(switch_edge(iter_tuple));
+        iter_tuple = switch_edge(switch_face(iter_tuple));
     } while ((id(iter_tuple, PrimitiveType::HalfEdge) != gid) &&
              (id(iter_tuple, PrimitiveType::HalfEdge) != hid));
     return vertex;

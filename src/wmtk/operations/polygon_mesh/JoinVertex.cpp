@@ -90,12 +90,13 @@ bool JoinVertex::precondition()
         return false;
     }
 
-    // At least one vertex must have valence greater than 1
+    // The previous halfedges of the edge must be distinct
     Simplex h0(PrimitiveType::HalfEdge, m_tuple);
     Simplex h1(PrimitiveType::HalfEdge, mesh().opp_halfedge(m_tuple));
-    Simplex g0(PrimitiveType::HalfEdge, mesh().next_halfedge(m_tuple));
-    Simplex g1(PrimitiveType::HalfEdge, mesh().next_halfedge(mesh().opp_halfedge(m_tuple)));
-    if ((mesh().simplices_are_equal(g0, h1)) && (mesh().simplices_are_equal(g1, h0))) {
+    Simplex g0(PrimitiveType::HalfEdge, mesh().prev_halfedge(m_tuple));
+    Simplex g1(PrimitiveType::HalfEdge, mesh().prev_halfedge(mesh().opp_halfedge(m_tuple)));
+    if ((mesh().simplices_are_equal(h0, g0)) || (mesh().simplices_are_equal(h0, g1)) ||
+        (mesh().simplices_are_equal(h1, g0)) || (mesh().simplices_are_equal(h1, g1))) {
         return false;
     }
 

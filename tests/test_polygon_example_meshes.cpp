@@ -148,6 +148,18 @@ TEST_CASE("test_debug_polygon_meshes_torus", "[examples]")
     run_debug_polygon_mesh(m, info);
 }
 
+TEST_CASE("test_debug_polygon_meshes_monogon_with_leaf", "[examples]")
+{
+    DEBUG_PolygonMesh m = monogon_with_leaf();
+    MeshDebugInfo info;
+    info.name = "monogon_with_leaf";
+    info.genus = 0;
+    info.boundary_curves = 0;
+    info.simply_connected_components = 1;
+    info.primitive_counts = std::array<long, 4>{{2, 2, 2, 4}};
+    run_debug_polygon_mesh(m, info);
+}
+
 TEST_CASE("test_debug_polygon_meshes_annulus", "[examples]")
 {
     DEBUG_PolygonMesh m = annulus();
