@@ -42,7 +42,7 @@ bool DeleteBubble::execute()
     return true;
 }
 
-bool DeleteBubble::precondition()
+bool DeleteBubble::precondition() const
 {
     // Get element ids
     long hij_id = get_halfedge_from_tuple(m_tuple);

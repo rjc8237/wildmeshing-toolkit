@@ -27,11 +27,11 @@ public:
     std::string name() const override;
 
     /**
-     * @brief Return tuple corresponding to the created edge
+     * @brief Return tuple corresponding to the created edge and face.
+     *
+     * The halfedge of the tuple is arbitrary, and the vertex is the base of this halfedge.
      */
     Tuple return_tuple() const;
-
-    using PolygonMeshOperation::hash_accessor;
 
 protected:
     Tuple m_output_tuple;

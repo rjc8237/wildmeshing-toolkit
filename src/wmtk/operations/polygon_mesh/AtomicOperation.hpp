@@ -31,10 +31,10 @@ protected:
     void make_hole(long face_id);
     void fill_hole(long face_id);
 
-    long get_face(long halfedge_id);
-    long get_next(long halfedge_id);
-    long get_vertex(long halfedge_id);
-    long get_halfedge_from_tuple(const Tuple& t);
+    long get_face(long halfedge_id) const;
+    long get_next(long halfedge_id) const;
+    long get_vertex(long halfedge_id) const;
+    long get_halfedge_from_tuple(const Tuple& t) const;
 
 
 private:

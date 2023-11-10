@@ -27,15 +27,13 @@ public:
 
     std::string name() const override;
 
-    using PolygonMeshOperation::hash_accessor;
-
     /**
      * @brief Check the precondition that the tuple specifies a bubble component edge.
      *
      * @return true if the tuple specifies a bubble edge
      * @return false otherwise
      */
-    bool precondition();
+    bool precondition() const;
 
 protected:
     bool execute() override;

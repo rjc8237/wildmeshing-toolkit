@@ -26,8 +26,6 @@ public:
 
     std::string name() const override;
 
-    using PolygonMeshOperation::hash_accessor;
-
     /**
      * @brief Check the precondition that the mesh remains manifold after the face is made a hole.
      *
@@ -36,11 +34,11 @@ public:
      * @return true if the mesh remains manifold
      * @return false otherwise
      */
-    bool precondition();
+    bool precondition() const;
 
 protected:
     bool execute() override;
-    bool precondition_at_vertex(long halfedge_id);
+    bool precondition_at_vertex(long halfedge_id) const;
 
 private:
     const OperationSettings<MakeHole>& m_settings;
