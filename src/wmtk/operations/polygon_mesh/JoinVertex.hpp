@@ -40,6 +40,14 @@ public:
      */
     bool precondition();
 
+    /**
+     * @brief Return tuple corresponding to the halfedge out of the new joined vertex in the same
+     * face as h.
+     *
+     * The vertex of the tuple is the new joined vertex.
+     */
+    Tuple return_tuple() const;
+
 protected:
     bool execute() override;
 
@@ -47,6 +55,7 @@ private:
     const OperationSettings<JoinVertex>& m_settings;
 
     Tuple m_tuple;
+    Tuple m_output_tuple;
 };
 
 } // namespace polygon_mesh

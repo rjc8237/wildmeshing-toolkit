@@ -42,6 +42,13 @@ public:
      */
     bool precondition();
 
+    /**
+     * @brief Return tuple corresponding to the halfedge created in the same split face as g.
+     *
+     * The vertex of the tuple is the base vertex of the halfedge.
+     */
+    Tuple return_tuple() const;
+
 protected:
     bool execute() override;
 
@@ -50,6 +57,7 @@ private:
 
     Tuple m_first_tuple;
     Tuple m_second_tuple;
+    Tuple m_output_tuple;
 };
 
 } // namespace polygon_mesh

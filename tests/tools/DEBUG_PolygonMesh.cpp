@@ -237,6 +237,52 @@ long DEBUG_PolygonMesh::genus() const
     return (2 - euler_characteristic() - count_boundary_loops()) / 2;
 }
 
+std::vector<long> DEBUG_PolygonMesh::get_face_id_loop(long hid) const
+{
+    Tuple iter_tuple = tuple_from_id(PrimitiveType::HalfEdge, hid);
+    std::vector<long> face(0);
+    do {
+        face.push_back(id(iter_tuple, PrimitiveType::HalfEdge));
+        iter_tuple = next_halfedge(iter_tuple);
+    } while (id(iter_tuple, PrimitiveType::HalfEdge) != hid);
+    return face;
+}
+
+std::vector<long> DEBUG_PolygonMesh::get_vertex_id_loop(long hid) const
+{
+    Tuple iter_tuple = switch_vertex(tuple_from_id(PrimitiveType::HalfEdge, hid));
+    std::vector<long> vertex(0);
+    do {
+        vertex.push_back(id(iter_tuple, PrimitiveType::HalfEdge));
+        iter_tuple = switch_face(switch_edge(iter_tuple));
+    } while (id(iter_tuple, PrimitiveType::HalfEdge) != hid);
+    return vertex;
+}
+
+std::vector<long> DEBUG_PolygonMesh::get_face_id_loop_range(long hid, long gid) const
+{
+    Tuple iter_tuple = tuple_from_id(PrimitiveType::HalfEdge, hid);
+    std::vector<long> face(0);
+    do {
+        face.push_back(id(iter_tuple, PrimitiveType::HalfEdge));
+        iter_tuple = next_halfedge(iter_tuple);
+    } while ((id(iter_tuple, PrimitiveType::HalfEdge) != gid) &&
+             (id(iter_tuple, PrimitiveType::HalfEdge) != hid));
+    return face;
+}
+
+std::vector<long> DEBUG_PolygonMesh::get_vertex_id_loop_range(long hid, long gid) const
+{
+    Tuple iter_tuple = switch_vertex(tuple_from_id(PrimitiveType::HalfEdge, hid));
+    std::vector<long> vertex(0);
+    do {
+        vertex.push_back(id(iter_tuple, PrimitiveType::HalfEdge));
+        iter_tuple = switch_face(switch_edge(iter_tuple));
+    } while ((id(iter_tuple, PrimitiveType::HalfEdge) != gid) &&
+             (id(iter_tuple, PrimitiveType::HalfEdge) != hid));
+    return vertex;
+}
+
 bool DEBUG_PolygonMesh::is_connectivity_valid() const
 {
     ConstAccessor<char> v_flag_accessor = get_flag_accessor(PrimitiveType::Vertex);

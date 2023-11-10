@@ -154,6 +154,42 @@ public:
     long genus() const;
 
     /**
+     * @brief Compute the ccw face loop starting from a given halfedge
+     *
+     * @param hid: id of the starting halfedge
+     * @return loop of halfedge ids around a face
+     */
+    std::vector<long> get_face_id_loop(long hid) const;
+
+    /**
+     * @brief Compute the ccw vertex loop starting from a given halfedge
+     *
+     * @param hid: id of the starting halfedge
+     * @return loop of halfedge ids around a vertex
+     */
+    std::vector<long> get_vertex_id_loop(long hid) const;
+
+    /**
+     * @brief Compute the segment of the ccw face loop starting from a given halfedge hid until
+     * the halfedge gid
+     *
+     * @param hid: id of the starting halfedge
+     * @param gid: id of the ending halfedge
+     * @return loop of halfedge ids around a face
+     */
+    std::vector<long> get_face_id_loop_range(long hid, long gid) const;
+
+    /**
+     * @brief Compute the segment of the ccw vertex loop starting from a given halfedge hid until
+     * the halfedge gid
+     *
+     * @param hid: id of the starting halfedge
+     * @param gid: id of the ending halfedge
+     * @return loop of halfedge ids around a vertex
+     */
+    std::vector<long> get_vertex_id_loop_range(long hid, long gid) const;
+
+    /**
      * @brief Determine if the local connectivity for a primitive specified by tuple is valid
      *
      * @param tuple: tuple to check

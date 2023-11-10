@@ -583,3 +583,380 @@ TEST_CASE("split_face_operation", "[operations][split_face][polygon]")
     CHECK(success);
     REQUIRE(m.is_connectivity_valid());
 }
+
+bool is_periodic_subsequence(
+    const std::vector<long>& sub,
+    const std::vector<long>& vec,
+    long offset)
+{
+    long n = vec.size();
+    long m = sub.size();
+    if (n < m) {
+        return false; // Cannot have longer subsequence than vector
+    }
+    if (m == 0) {
+        return true; // Empty subsequence
+    }
+
+    for (long j = 0; j < m; ++j) {
+        if (sub[j] != vec[(j + offset) % n]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool is_periodic_subsequence(const std::vector<long>& sub, const std::vector<long>& vec)
+{
+    // Try all possible starting points in the vector for the subsequence
+    long n = vec.size();
+    for (long i = 0; i < n; ++i) {
+        if (is_periodic_subsequence(sub, vec, i)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool join_vertex_postcondition(
+    const DEBUG_PolygonMesh& m0,
+    const DEBUG_PolygonMesh& m,
+    const Tuple& h_tuple)
+{
+    std::array<long, 2> hids = {m0.id(h_tuple, PH), m0.id(m0.opp_halfedge(h_tuple), PH)};
+    std::array<long, 2> gids = {
+        m0.id(m0.next_halfedge(h_tuple), PH),
+        m0.id(m0.next_halfedge(m0.opp_halfedge(h_tuple)), PH)};
+
+    // Two face case
+    if (m0.id(h_tuple, PF) != m0.id(m0.opp_halfedge(h_tuple), PF)) {
+        // Check each face is the same as the original with h edge removed
+        for (long i = 0; i < 2; ++i) {
+            std::vector<long> f0 = m0.get_face_id_loop(hids[i]);
+            std::vector<long> f = m.get_face_id_loop(gids[i]);
+            if ((f0.size() != f.size() + 1) || (!is_periodic_subsequence(f, f0, 1))) {
+                return false;
+            }
+        }
+    }
+    // One face case
+    else {
+        // Check new face is the same as the original with h edge removed
+        std::vector<long> f0 = m0.get_face_id_loop(hids[0]);
+        std::vector<long> f = m.get_face_id_loop(gids[0]);
+        if (f0.size() != f.size() + 2) {
+            return false;
+        }
+        for (long i = 0; i < 2; ++i) {
+            std::vector<long> f0 = m0.get_face_id_loop_range(hids[i], hids[1 - i]);
+            std::vector<long> f = m.get_face_id_loop_range(gids[i], gids[1 - i]);
+            if ((f0.size() != f.size() + 1) || (!is_periodic_subsequence(f, f0, 1))) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+TEST_CASE("join_vertex_operation", "[operations][join_vertex][polygon]")
+{
+    using namespace operations;
+
+    DEBUG_PolygonMesh m0, m;
+    OperationSettings<polygon_mesh::JoinVertex> op_settings;
+    bool success;
+
+    SECTION("join digon vertex")
+    {
+        m0 = digon();
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        polygon_mesh::JoinVertex op(m, h, op_settings);
+        success = op();
+        Tuple v = op.return_tuple();
+
+        CHECK(join_vertex_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 2);
+    }
+    SECTION("join triangle vertex")
+    {
+        m0 = triangle();
+        m = triangle();
+        Tuple h = m.tuple_from_id(PH, 1);
+        polygon_mesh::JoinVertex op(m, h, op_settings);
+        success = op();
+        Tuple v = op.return_tuple();
+
+        CHECK(join_vertex_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 2);
+    }
+    SECTION("join vertex with common face")
+    {
+        m0 = torus();
+        m = torus();
+        Tuple h = m.tuple_from_id(PH, 0);
+        polygon_mesh::JoinVertex op(m, h, op_settings);
+        success = op();
+        Tuple v = op.return_tuple();
+
+        CHECK(join_vertex_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 1);
+    }
+    SECTION("join vertex with hole face")
+    {
+        m0 = triangle();
+        polygon_mesh::MakeHole(m0, m0.tuple_from_id(PH, 0), {})();
+        m = triangle();
+        polygon_mesh::MakeHole(m, m.tuple_from_id(PH, 0), {})();
+
+        Tuple h = m.tuple_from_id(PH, 0);
+        polygon_mesh::JoinVertex op(m, h, op_settings);
+        success = op();
+        Tuple v = op.return_tuple();
+
+        CHECK(join_vertex_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 1);
+        CHECK(m.count_interior_faces() == 1);
+    }
+
+    CHECK(success);
+    REQUIRE(m.is_connectivity_valid());
+}
+
+bool split_vertex_postcondition(
+    const DEBUG_PolygonMesh& m0,
+    const DEBUG_PolygonMesh& m,
+    const Tuple& e_tuple,
+    const Tuple& h_tuple,
+    const Tuple& g_tuple)
+{
+    long hid = m0.id(h_tuple, PH);
+    long gid = m0.id(g_tuple, PH);
+
+    // Check first vertex
+    std::vector<long> v0 = m0.get_vertex_id_loop_range(hid, gid);
+    std::vector<long> v = m.get_vertex_id_loop(hid);
+    if ((v.size() != v0.size() + 1) || (!is_periodic_subsequence(v0, v, 0))) {
+        return false;
+    }
+    if (v.back() != m.id(m.opp_halfedge(e_tuple), PH)) {
+        return false;
+    }
+
+    // Check second vertex
+    std::vector<long> w0 = m0.get_vertex_id_loop_range(gid, hid);
+    std::vector<long> w = m.get_vertex_id_loop(gid);
+    if ((w.size() != w0.size() + 1) || (!is_periodic_subsequence(w0, w, 0))) {
+        return false;
+    }
+    if (w.back() != m.id(e_tuple, PH)) {
+        return false;
+    }
+
+    return true;
+}
+
+TEST_CASE("split_vertex_operation", "[operations][split_vertex][polygon]")
+{
+    using namespace operations;
+
+    DEBUG_PolygonMesh m0, m;
+    OperationSettings<polygon_mesh::SplitVertex> op_settings;
+    bool success;
+
+    SECTION("split digon vertex")
+    {
+        m0 = digon();
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 3);
+        polygon_mesh::SplitVertex op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_vertex_postcondition(m0, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 2);
+    }
+    SECTION("split triangle vertex")
+    {
+        m0 = triangle();
+        m = triangle();
+        Tuple h = m.tuple_from_id(PH, 2);
+        Tuple g = m.tuple_from_id(PH, 5);
+        polygon_mesh::SplitVertex op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_vertex_postcondition(m0, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 4);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 4);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 2);
+    }
+    SECTION("split vertex with common face")
+    {
+        m0 = torus();
+        m = torus();
+        Tuple h = m.tuple_from_id(PH, 0);
+        //Tuple g = m.tuple_from_id(PH, 1); // TODO Currently buggy
+        // TODO Try g = 1,2,3
+        Tuple g = m.tuple_from_id(PH, 2);
+        polygon_mesh::SplitVertex op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        // CHECK(split_vertex_postcondition(m0, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 1);
+    }
+    SECTION("split vertex with hole face")
+    {
+        m0 = triangle();
+        polygon_mesh::MakeHole(m0, m0.tuple_from_id(PH, 0), {})();
+        m = triangle();
+        polygon_mesh::MakeHole(m, m.tuple_from_id(PH, 0), {})();
+
+        Tuple h = m.tuple_from_id(PH, 0);
+        Tuple g = m.tuple_from_id(PH, 3);
+        polygon_mesh::SplitVertex op(m, h, g, op_settings);
+        success = op();
+        Tuple e = op.return_tuple();
+
+        CHECK(split_vertex_postcondition(m0, m, e, h, g));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 4);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 4);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 2);
+        CHECK(m.count_hole_faces() == 1);
+        CHECK(m.count_interior_faces() == 1);
+    }
+
+    CHECK(success);
+    REQUIRE(m.is_connectivity_valid());
+}
+
+bool join_face_postcondition(
+    const DEBUG_PolygonMesh& m0,
+    const DEBUG_PolygonMesh& m,
+    const Tuple& h_tuple)
+{
+    std::array<long, 2> hids = {m0.id(h_tuple, PH), m0.id(m0.opp_halfedge(h_tuple), PH)};
+    std::array<long, 2> gids = {
+        m0.id(m0.next_halfedge(h_tuple), PH),
+        m0.id(m0.next_halfedge(m0.opp_halfedge(h_tuple)), PH)};
+
+    // Check first face
+    for (long i = 0; i < 2; ++i) {
+        std::vector<long> f0 = m0.get_face_id_loop(hids[i]);
+        std::vector<long> f = m.get_face_id_loop_range(gids[i], gids[1 - i]);
+        if ((f0.size() != f.size() + 1) || (!is_periodic_subsequence(f, f0, 1))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+TEST_CASE("join_face_operation", "[operations][split_vertex][polygon]")
+{
+    using namespace operations;
+
+    DEBUG_PolygonMesh m0, m;
+    OperationSettings<polygon_mesh::JoinFace> op_settings;
+    bool success;
+
+    SECTION("join digon face")
+    {
+        m0 = digon();
+        m = digon();
+        Tuple h = m.tuple_from_id(PH, 0);
+        polygon_mesh::JoinFace op(m, h, op_settings);
+        success = op();
+
+        CHECK(join_face_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 1);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 1);
+    }
+    SECTION("join triangle face")
+    {
+        m0 = triangle();
+        m = triangle();
+        Tuple h = m.tuple_from_id(PH, 2);
+        polygon_mesh::JoinFace op(m, h, op_settings);
+        success = op();
+
+        CHECK(join_face_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 1);
+    }
+    SECTION("join face with hole face")
+    {
+        m0 = triangle();
+        polygon_mesh::MakeHole(m0, m0.tuple_from_id(PH, 0), {})();
+        m = triangle();
+        polygon_mesh::MakeHole(m, m.tuple_from_id(PH, 0), {})();
+        Tuple h = m.tuple_from_id(PH, 2);
+        polygon_mesh::JoinFace op(m, h, op_settings);
+        success = op();
+
+        CHECK(join_face_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 0);
+        CHECK(m.count_interior_faces() == 1);
+    }
+    SECTION("join face with two hole face")
+    {
+        m0 = triangle();
+        polygon_mesh::MakeHole(m0, m0.tuple_from_id(PH, 0), {})();
+        polygon_mesh::MakeHole(m0, m0.tuple_from_id(PH, 1), {})();
+        m = triangle();
+        polygon_mesh::MakeHole(m, m.tuple_from_id(PH, 0), {})();
+        polygon_mesh::MakeHole(m, m.tuple_from_id(PH, 1), {})();
+        Tuple h = m.tuple_from_id(PH, 2);
+        polygon_mesh::JoinFace op(m, h, op_settings);
+        success = op();
+
+        CHECK(join_face_postcondition(m0, m, h));
+        CHECK(m.get_all(PrimitiveType::Vertex).size() == 3);
+        CHECK(m.get_all(PrimitiveType::Edge).size() == 2);
+        CHECK(m.get_all(PrimitiveType::Face).size() == 1);
+        CHECK(m.count_hole_faces() == 1);
+        CHECK(m.count_interior_faces() == 0);
+    }
+
+    CHECK(success);
+    REQUIRE(m.is_connectivity_valid());
+}

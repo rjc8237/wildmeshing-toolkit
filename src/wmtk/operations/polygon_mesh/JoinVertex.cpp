@@ -1,6 +1,7 @@
 #include "JoinVertex.hpp"
 #include <wmtk/Simplex.hpp>
 #include "DeleteBubble.hpp"
+#include "FillHole.hpp"
 #include "MakeHole.hpp"
 #include "Splice.hpp"
 
@@ -21,30 +22,60 @@ bool JoinVertex::execute()
 {
     assert(precondition());
 
+    // Get relevant halfedge tuples
+    std::array<Tuple, 2> h_tuples = {m_tuple, mesh().opp_halfedge(m_tuple)};
+    std::array<Tuple, 2> hp_tuples = {
+        mesh().prev_halfedge(h_tuples[0]),
+        mesh().prev_halfedge(h_tuples[1])};
+
+    // Check if the faces adjacent to the halfedge are holes
+    std::array<bool, 2> is_f_hole = {
+        mesh().is_hole_face(h_tuples[0]),
+        mesh().is_hole_face(h_tuples[1])};
+
     // The join is done by simply splicing out the edge
-    Tuple h0_tuple = m_tuple;
-    Tuple h1_tuple = mesh().opp_halfedge(h0_tuple);
-    Tuple g0_tuple = mesh().prev_halfedge(h0_tuple);
-    Tuple g1_tuple = mesh().prev_halfedge(h1_tuple);
     OperationSettings<Splice> splice_settings;
-    if (!Splice(mesh(), g1_tuple, h0_tuple, splice_settings)()) {
+    if (!Splice(mesh(), hp_tuples[1], h_tuples[0], splice_settings)()) {
         return false;
     }
-    if (!Splice(mesh(), g0_tuple, h1_tuple, splice_settings)()) {
+    if (!Splice(mesh(), hp_tuples[0], h_tuples[1], splice_settings)()) {
         return false;
     }
-    if (!Splice(mesh(), g0_tuple, g1_tuple, splice_settings)()) {
+    if (!Splice(mesh(), hp_tuples[0], hp_tuples[1], splice_settings)()) {
         return false;
     }
 
     // Delete the spliced out edge bubble
     OperationSettings<DeleteBubble> delete_bubble_settings;
-    DeleteBubble delete_bubble(mesh(), h0_tuple, delete_bubble_settings);
+    DeleteBubble delete_bubble(mesh(), h_tuples[0], delete_bubble_settings);
     if (!delete_bubble()) {
         return false;
     }
 
+    // Mark faces as holes or filled as necessary
+    for (long i = 0; i < 2; ++i) {
+        if ((is_f_hole[i]) && (!mesh().is_hole_face(hp_tuples[i]))) {
+            OperationSettings<MakeHole> make_hole_settings;
+            if (!MakeHole(mesh(), hp_tuples[i], make_hole_settings)()) {
+                return false;
+            }
+        } else if ((!is_f_hole[i]) && (mesh().is_hole_face(hp_tuples[i]))) {
+            OperationSettings<FillHole> fill_hole_settings;
+            if (!FillHole(mesh(), hp_tuples[i], fill_hole_settings)()) {
+                return false;
+            }
+        }
+    }
+
+    // Set the output tuple to the next halfedge after g0
+    m_output_tuple = mesh().next_halfedge(hp_tuples[0]);
+
     return true;
+}
+
+Tuple JoinVertex::return_tuple() const
+{
+    return m_output_tuple;
 }
 
 bool JoinVertex::precondition()
