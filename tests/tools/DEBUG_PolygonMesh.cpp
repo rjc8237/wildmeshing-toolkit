@@ -35,6 +35,11 @@ long DEBUG_PolygonMesh::id(const Tuple& tuple, PrimitiveType type) const
     return PolygonMesh::id(tuple, type);
 }
 
+const MeshAttributeHandle<long>& DEBUG_PolygonMesh::next_handle() const
+{
+    return m_next_handle;
+}
+
 Tuple DEBUG_PolygonMesh::halfedge_tuple_from_vertex_in_face(long vid, long fid) const
 {
     Tuple f_tuple = tuple_from_id(PrimitiveType::Face, fid);
@@ -143,6 +148,42 @@ long DEBUG_PolygonMesh::count_boundary_loops() const
     return boundary_loop_id;
 }
 
+bool DEBUG_PolygonMesh::is_hole_vertex(const Tuple& v) const
+{
+    Tuple v_iter = v;
+    do {
+        if (!is_hole_face(v_iter)) {
+            return false;
+        }
+        v_iter = switch_tuple(switch_tuple(v_iter, PrimitiveType::Face), PrimitiveType::Edge);
+    } while (v_iter != v);
+
+    return true;
+}
+
+bool DEBUG_PolygonMesh::is_hole_edge(const Tuple& e) const
+{
+    return (is_hole_face(e) && is_hole_face(opp_halfedge(e)));
+}
+
+bool DEBUG_PolygonMesh::is_hole(const Tuple& tuple, PrimitiveType type) const
+{
+    switch (type) {
+    case PrimitiveType::Vertex: {
+        return is_hole_vertex(tuple);
+    }
+    case PrimitiveType::Edge: {
+        return is_hole_edge(tuple);
+    }
+    case PrimitiveType::Face: {
+        return is_hole_face(tuple);
+    }
+    case PrimitiveType::HalfEdge:
+    case PrimitiveType::Tetrahedron:
+    default: throw std::runtime_error("Invalid primitive type"); break;
+    }
+}
+
 long DEBUG_PolygonMesh::count_hole_faces() const
 {
     auto faces = get_all(PrimitiveType::Face);
@@ -156,12 +197,35 @@ long DEBUG_PolygonMesh::count_hole_faces() const
     return num_hole_faces;
 }
 
+long DEBUG_PolygonMesh::count_interior_faces() const
+{
+    return get_all(PrimitiveType::Face).size() - count_hole_faces();
+}
+
+long DEBUG_PolygonMesh::count_hole_primitives(PrimitiveType type) const
+{
+    auto primitives = get_all(type);
+    long num_hole_primitives = 0;
+    for (const auto& primitive : primitives) {
+        if (is_hole(primitive, type)) {
+            ++num_hole_primitives;
+        }
+    }
+
+    return num_hole_primitives;
+}
+
+
 long DEBUG_PolygonMesh::euler_characteristic() const
 {
     auto counts = primitive_counts();
-    long num_boundary_loops = count_boundary_loops();
-    long num_hole_faces = count_hole_faces();
-    return counts[0] - counts[1] + counts[2] + num_boundary_loops - num_hole_faces;
+    long num_hole_vertices = count_hole_primitives(PrimitiveType::Vertex);
+    long num_hole_edges = count_hole_primitives(PrimitiveType::Edge);
+    long num_hole_faces = count_hole_primitives(PrimitiveType::Face);
+    long num_vertices = counts[0] - num_hole_vertices;
+    long num_edges = counts[1] - num_hole_edges;
+    long num_faces = counts[2] - num_hole_faces;
+    return num_vertices - num_edges + num_faces;
 }
 
 long DEBUG_PolygonMesh::genus() const
@@ -170,7 +234,7 @@ long DEBUG_PolygonMesh::genus() const
         wmtk::logger().error("not a connected surface\n");
         throw std::runtime_error("GenusComputeError");
     }
-    return (2 - euler_characteristic()) / 2;
+    return (2 - euler_characteristic() - count_boundary_loops()) / 2;
 }
 
 bool DEBUG_PolygonMesh::is_connectivity_valid() const
@@ -190,6 +254,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
         }
 
         if (!is_halfedge_connectivity_valid(hid)) {
+            wmtk::logger().error("halfedge connectivity is not valid for halfedge", hid);
             return false;
         }
     }
@@ -207,6 +272,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
 
         // Check local vertex validity
         if (!is_vertex_connectivity_valid(vid)) {
+            wmtk::logger().error("vertex connectivity is not valid for vertex {}", vid);
             return false;
         }
     }
@@ -223,6 +289,7 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
 
         // Check local edge validity
         if (!is_edge_connectivity_valid(eid)) {
+            wmtk::logger().error("edge connectivity is not valid for edge {}", eid);
             return false;
         }
     }
@@ -239,18 +306,33 @@ bool DEBUG_PolygonMesh::is_connectivity_valid() const
 
         // Check local face validity
         if (!is_face_connectivity_valid(fid)) {
+            wmtk::logger().error("face connectivity is not valid for face {}", fid);
             return false;
         }
     }
 
     // Check element counts are consistent
     if (n_halfedges != (2 * n_edges)) {
+        wmtk::logger().error(
+            "edge count {} and halfedge count {} are inconsistent",
+            n_edges,
+            n_halfedges);
         return false;
     }
-    if (n_vertices != count_vertices_from_orbits()) {
+    long n_circulator_orbits = count_vertices_from_orbits();
+    if (n_vertices != n_circulator_orbits) {
+        wmtk::logger().error(
+            "vertex count {} and circulator orbit count {} are inconsistent",
+            n_vertices,
+            n_circulator_orbits);
         return false;
     }
-    if (n_faces != count_faces_from_orbits()) {
+    long n_next_orbits = count_faces_from_orbits();
+    if (n_faces != n_next_orbits) {
+        wmtk::logger().error(
+            "face count {} and next orbit count {} are inconsistent",
+            n_faces,
+            n_next_orbits);
         return false;
     }
 
@@ -280,13 +362,16 @@ bool DEBUG_PolygonMesh::is_local_connectivity_valid(const Tuple& tuple, Primitiv
 bool DEBUG_PolygonMesh::is_vertex_connectivity_valid(long vid) const
 {
     // Vertex id is in range
-    if ((vid < 0) || (vid >= capacity(PrimitiveType::Vertex))) {
+    long v_cap = capacity(PrimitiveType::Vertex);
+    if ((vid < 0) || (vid >= v_cap)) {
+        wmtk::logger().error("vertex id {} is out of range [0, {})", vid, v_cap);
         return false;
     }
 
     // Vertex is not deleted
     ConstAccessor<char> v_flag_accessor = get_flag_accessor(PrimitiveType::Vertex);
     if (get_index_access(v_flag_accessor).scalar_attribute(vid) == 0) {
+        wmtk::logger().error("vertex {} is deleted", vid);
         return false;
     }
 
@@ -299,10 +384,17 @@ bool DEBUG_PolygonMesh::is_vertex_connectivity_valid(long vid) const
     long n_halfedges = capacity(PrimitiveType::HalfEdge);
     long n_circulations = 0;
     do {
-        if (get_index_access(to_accessor).scalar_attribute(hid_iter) != vid) {
+        long hid_to = get_index_access(to_accessor).scalar_attribute(hid_iter);
+        if (hid_to != vid) {
+            wmtk::logger().error(
+                "halfedge {} in the circulator orbit of vertex {} points to {}",
+                hid_iter,
+                vid,
+                hid_to);
             return false;
         }
         if (n_circulations > n_halfedges) {
+            wmtk::logger().error("more vertex circulations than possible attempted");
             return false;
         }
 
@@ -317,19 +409,24 @@ bool DEBUG_PolygonMesh::is_vertex_connectivity_valid(long vid) const
 bool DEBUG_PolygonMesh::is_edge_connectivity_valid(long eid) const
 {
     // Edge id is in range
-    if ((eid < 0) || (eid >= capacity(PrimitiveType::Edge))) {
+    long e_cap = capacity(PrimitiveType::Edge);
+    if ((eid < 0) || (eid >= e_cap)) {
+        wmtk::logger().error("edge id {} is out of range [0, {})", eid, e_cap);
         return false;
     }
 
     // Edge is not deleted
     ConstAccessor<char> e_flag_accessor = get_flag_accessor(PrimitiveType::Edge);
     if (get_index_access(e_flag_accessor).scalar_attribute(eid) == 0) {
+        wmtk::logger().error("edge {} is deleted", eid);
         return false;
     }
 
     // opp and the edge to halfedge and halfedge to edge maps are implicit
     // We simply check that the corresponding halfedge ids 2e and 2e + 1 are in range
-    if (2 * eid + 1 >= capacity(PrimitiveType::HalfEdge)) {
+    long h_cap = capacity(PrimitiveType::HalfEdge);
+    if (2 * eid > h_cap) {
+        wmtk::logger().error("edge {} is inconsistent with halfedge range [0, {})", eid, h_cap);
         return false;
     }
 
@@ -339,13 +436,16 @@ bool DEBUG_PolygonMesh::is_edge_connectivity_valid(long eid) const
 bool DEBUG_PolygonMesh::is_face_connectivity_valid(long fid) const
 {
     // Face id is in range
-    if ((fid < 0) || (fid >= capacity(PrimitiveType::Face))) {
+    long f_cap = capacity(PrimitiveType::Face);
+    if ((fid < 0) || (fid >= f_cap)) {
+        wmtk::logger().error("face id {} is out of range [0, {})", fid, f_cap);
         return false;
     }
 
     // Face is not deleted
     ConstAccessor<char> f_flag_accessor = get_flag_accessor(PrimitiveType::Face);
     if (get_index_access(f_flag_accessor).scalar_attribute(fid) == 0) {
+        wmtk::logger().error("face {} is deleted", fid);
         return false;
     }
 
@@ -358,10 +458,17 @@ bool DEBUG_PolygonMesh::is_face_connectivity_valid(long fid) const
     long n_halfedges = capacity(PrimitiveType::HalfEdge);
     long n_circulations = 0;
     do {
-        if (get_index_access(hf_accessor).scalar_attribute(hid_iter) != fid) {
+        long hid_face = get_index_access(hf_accessor).scalar_attribute(hid_iter);
+        if (hid_face != fid) {
+            wmtk::logger().error(
+                "halfedge {} in the next orbit of face {} is adjacent to {}",
+                hid_iter,
+                fid,
+                hid_face);
             return false;
         }
         if (n_circulations > n_halfedges) {
+            wmtk::logger().error("more face circulations than possible attempted");
             return false;
         }
 
@@ -420,7 +527,7 @@ long DEBUG_PolygonMesh::count_vertices_from_orbits() const
     for (long hid = 0; hid < n_halfedges; ++hid) {
         // Skip deleted halfedges
         if (get_index_access(h_flag_accessor).scalar_attribute(hid) == 0) {
-            return false;
+            continue;
         }
 
         // Build the vertex orbit of the halfedge under the circulator if it hasn't been seen yet
@@ -454,7 +561,7 @@ long DEBUG_PolygonMesh::count_faces_from_orbits() const
     for (long hid = 0; hid < n_halfedges; ++hid) {
         // Skip deleted halfedges
         if (get_index_access(h_flag_accessor).scalar_attribute(hid) == 0) {
-            return false;
+            continue;
         }
 
         // Build the face orbit of the halfedge under next if it hasn't been seen yet

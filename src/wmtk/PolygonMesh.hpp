@@ -4,11 +4,16 @@
 #include "Tuple.hpp"
 
 #include <Eigen/Core>
+#include "Mesh.hpp"
 
 #include "Mesh.hpp"
 #include "Tuple.hpp"
 
 namespace wmtk {
+
+namespace operations::polygon_mesh {
+class AtomicOperation;
+} // namespace operations::polygon_mesh
 
 /**
  * @brief Representation of a general oriented manifold polygonal mesh.
@@ -19,6 +24,8 @@ namespace wmtk {
 class PolygonMesh : public Mesh
 {
 public:
+    friend class operations::polygon_mesh::AtomicOperation;
+
     PolygonMesh();
     PolygonMesh(const PolygonMesh& o);
     PolygonMesh(PolygonMesh&& o);

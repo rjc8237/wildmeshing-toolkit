@@ -5,7 +5,6 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/recipes/tests")
 include(catch2)
 include(wmtk_data)
 
-
 # Sources
 set(TEST_SOURCES
     test_topology.cpp
@@ -27,6 +26,7 @@ set(TEST_SOURCES
     test_accessor.cpp
     test_example_meshes.cpp
     test_polygon_example_meshes.cpp
+    test_polygon_operations.cpp
     test_3d_operations.cpp
     test_multi_mesh.cpp
     test_multi_mesh_visitor.cpp
@@ -83,7 +83,6 @@ include(Catch)
 
 add_subdirectory(components)
 source_group("components" REGULAR_EXPRESSION "components\/.*\.(cpp|h|hpp)?$")
-
 
 add_subdirectory(function)
 source_group("function" REGULAR_EXPRESSION "function\/.*\.(cpp|h|hpp)?$")

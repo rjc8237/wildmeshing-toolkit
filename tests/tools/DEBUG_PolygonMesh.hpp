@@ -18,6 +18,26 @@ public:
     long id(const Tuple& tuple, PrimitiveType type) const override;
     using PolygonMesh::tuple_from_id;
 
+    template <typename T>
+    attribute::AccessorBase<T> create_base_accessor(const MeshAttributeHandle<T>& handle)
+    {
+        return attribute::AccessorBase<T>(*this, handle);
+    }
+
+    template <typename T>
+    attribute::AccessorBase<T> create_const_base_accessor(
+        const MeshAttributeHandle<T>& handle) const
+    {
+        return attribute::AccessorBase<T>(const_cast<DEBUG_PolygonMesh&>(*this), handle);
+    }
+    template <typename T>
+    attribute::AccessorBase<T> create_base_accessor(const MeshAttributeHandle<T>& handle) const
+    {
+        return create_const_base_accessor(handle);
+    }
+
+    const MeshAttributeHandle<long>& next_handle() const;
+
     /**
      * @brief Perform a complete validity check to ensure the polygon mesh data represents
      * a valid manifold surface.
@@ -70,11 +90,54 @@ public:
     long count_boundary_loops() const;
 
     /**
+     * @brief Determine if a vertex is a hole vertex (i.e., surrounded by hole faces)
+     *
+     * @param v: tuple representing a vertex
+     * @return true if v is a hole vertex
+     * @return false otherwise
+     */
+    bool is_hole_vertex(const Tuple& v) const;
+
+    /**
+     * @brief Determine if an edge is a hole edge (i.e., surrounded by hole faces)
+     *
+     * @param e: tuple representing a edge
+     * @return true if e is a hole edge
+     * @return false otherwise
+     */
+    bool is_hole_edge(const Tuple& e) const;
+
+    /**
+     * @brief Determine if a primitive specified by a tuple is a hole.
+     *
+     * @param tuple: tuple specifying a primitive
+     * @param type: type of the primitive
+     * @return true if the primitive is a hole
+     * @return false otherwise
+     */
+    bool is_hole(const Tuple& tuple, PrimitiveType type) const;
+
+    /**
+     * @brief Count the number of primitives of a given type that are holes.
+     *
+     * @param type: type of hole primitives to count
+     * @return long number of hole primitives
+     */
+    long count_hole_primitives(PrimitiveType type) const;
+
+    /**
      * @brief Count the number of hole faces in the mesh
      *
      * @return number of hole faces
      */
     long count_hole_faces() const;
+
+    /**
+     * @brief Count the number of interior faces in the mesh
+     *
+     * @return number of interior faces
+     */
+    long count_interior_faces() const;
 
     /**
      * @brief Compute the Euler characteristic of the mesh
