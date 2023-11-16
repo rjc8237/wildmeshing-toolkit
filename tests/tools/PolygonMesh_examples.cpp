@@ -109,6 +109,16 @@ PolygonMesh torus()
     return m;
 }
 
+PolygonMesh monogon_with_leaf()
+{
+    PolygonMesh m;
+
+    VectorXl next(4);
+    next << 2, 1, 3, 0;
+    m.initialize(next);
+    return m;
+}
+
 PolygonMesh annulus()
 {
     PolygonMesh m;

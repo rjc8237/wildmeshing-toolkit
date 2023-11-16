@@ -13,6 +13,7 @@ template <>
 struct OperationSettings<polygon_mesh::Splice>
 {
     // TODO Determine if operation settings are necessary
+    // TODO Add option to prohibit splice if faces are different hole types
 };
 
 namespace polygon_mesh {
@@ -62,6 +63,25 @@ private:
      * @return next halfedge of h after the splice is complete
      */
     long next_after_splice(long h) const;
+
+    /**
+     * @brief Helper function for determining if a face is a hole after the splice is complete.
+     *
+     * @param fid: face index
+     * @return true if the face is a hole after the splice
+     * @return false otherwise
+     */
+    bool is_hole_after_splice(long fid) const;
+
+    /**
+     * @brief Check the precondition that the mesh remains manifold at a given vertex after the
+     * splice.
+     *
+     * @param halfedge_id: index of a halfedge pointing to the target vertex
+     * @return true if the mesh at the vertex remains manifold
+     * @return false otherwise
+     */
+    bool precondition_at_vertex(long halfedge_id) const;
 };
 
 } // namespace polygon_mesh

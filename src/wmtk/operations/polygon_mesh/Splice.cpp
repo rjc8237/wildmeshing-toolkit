@@ -1,5 +1,6 @@
 #include "Splice.hpp"
 #include <algorithm>
+#include "FillHole.hpp"
 
 namespace {
 // Implicit opposite map for halfedges paired as [e] = {2*e, 2*e + 1}
@@ -103,35 +104,77 @@ long Splice::next_after_splice(long h) const
     }
 }
 
+bool Splice::is_hole_after_splice(long fid) const
+{
+    std::array<long, 2> old_h_ids = {
+        get_halfedge_from_tuple(m_first_tuple),
+        get_halfedge_from_tuple(m_second_tuple)};
+    std::array<long, 2> old_hf_ids = {get_face(old_h_ids[0]), get_face(old_h_ids[1])};
+
+    // Faces adjacent to spliced halfedges are holes iff both input are holes
+    if ((fid == old_hf_ids[0]) || (fid == old_hf_ids[1])) {
+        return (is_hole(old_hf_ids[0]) && is_hole(old_hf_ids[1]));
+    } else {
+        return is_hole(fid);
+    }
+}
+
 bool Splice::precondition() const
 {
-    long old_h_id = get_halfedge_from_tuple(m_first_tuple);
-    long old_g_id = get_halfedge_from_tuple(m_second_tuple);
-    long old_hv_id = get_vertex(old_h_id);
-    long old_gv_id = get_vertex(old_g_id);
+    // Get old halfedge indices
+    std::array<long, 2> old_h_ids = {
+        get_halfedge_from_tuple(m_first_tuple),
+        get_halfedge_from_tuple(m_second_tuple)};
+    std::array<long, 2> old_hf_ids = {get_face(old_h_ids[0]), get_face(old_h_ids[1])};
+    std::array<long, 2> old_hv_ids = {get_vertex(old_h_ids[0]), get_vertex(old_h_ids[1])};
 
-    // Splitting a vertex is always manifold
-    if (old_hv_id == old_gv_id) {
-        return true;
+    // Check boundary validity at each vertex of the face if merging a hole and interior face
+    if (is_hole(old_hf_ids[0]) != is_hole(old_hf_ids[1])) {
+        long h_iter = old_h_ids[0];
+        do {
+            if (!precondition_at_vertex(h_iter)) {
+                return false;
+            }
+            h_iter = next_after_splice(h_iter);
+        } while (h_iter != old_h_ids[0]);
+    }
+    // Check boundary validity at just the new vertex if merging distinct vertices
+    else if (old_hv_ids[0] != old_hv_ids[1]) {
+        if (!precondition_at_vertex(old_h_ids[0])) {
+            return false;
+        }
     }
 
-    // Check boundary validity
-    long h_iter = old_h_id;
+    return true;
+}
+
+
+bool Splice::precondition_at_vertex(long halfedge_id) const
+{
+    // Get old halfedge indices
+    std::array<long, 2> old_h_ids = {
+        get_halfedge_from_tuple(m_first_tuple),
+        get_halfedge_from_tuple(m_second_tuple)};
+    std::array<long, 2> old_hf_ids = {get_face(old_h_ids[0]), get_face(old_h_ids[1])};
+
+    // Check boundary validity at merged vertex
+    long h_iter = halfedge_id;
     long num_boundary_edges = 0;
-    bool prev_is_hole = is_hole(get_face(old_h_id));
+    bool prev_is_hole = is_hole_after_splice(get_face(h_iter));
+    // Check if the current face is a hole
     do {
         // Circulate around the vertex
         h_iter = implicit_opp(next_after_splice(h_iter));
 
         // Check if switched from hole to interior or reverse
-        long curr_is_hole = is_hole(get_face(h_iter));
+        bool curr_is_hole = is_hole_after_splice(get_face(h_iter));
         if (curr_is_hole != prev_is_hole) {
             num_boundary_edges++;
         }
 
         // Update current hole status
         prev_is_hole = curr_is_hole;
-    } while (h_iter != old_h_id);
+    } while (h_iter != halfedge_id);
 
     assert((num_boundary_edges % 2) == 0);
     return (num_boundary_edges <= 2);

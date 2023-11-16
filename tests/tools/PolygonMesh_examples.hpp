@@ -116,6 +116,15 @@ PolygonMesh two_squares();
 //
 PolygonMesh torus();
 
+//      --e0--
+//    /        \ .
+//   |    ||    |
+//   | h10||h11 |
+//    \   ||   /
+//      -->*--
+//
+PolygonMesh monogon_with_leaf();
+
 // Generate a random polygon mesh with a given number of edges
 PolygonMesh random_polygon_mesh(long num_edges, long rng_seed = 0);
 
